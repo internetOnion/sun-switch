@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using SunSwitch.Art;
+using SunSwitch.Obstacles;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -11,15 +12,18 @@ namespace SunSwitch.Art.EditorTools
     ///
     /// Obstacles sit ON a platform: the pivot is the bottom centre, so place them at the
     /// platform's top y. Same layout rules as the platforms: colliders on the root (or a named
-    /// child for triggers), art in Visual, variants only swap the phase material.
+    /// child for triggers), art in Visual. Behaviour comes from the gameplay scripts in
+    /// Assets/Scripts (SunSwitch.Obstacles, SunSwitch.Core). Every root has a PhaseObject;
+    /// variants only swap the phase material and set the PhaseObject tag + ghost material.
     ///
-    ///   KillBar_X            root: post collider
+    ///   KillBar_X            root: post collider, PhaseObject
     ///   ├─ Visual            post
-    ///   └─ Arm               Spinner + kinematic Rigidbody + trigger + KillZone, 0.75 m up
+    ///   └─ Arm               SpinningBar + kinematic Rigidbody + trigger + KillSurface, 0.75 m up
     ///        └─ Visual       striped bar (5.5 m, sweeps a 2.75 m radius)
-    ///   JumpPad_X            root: stone collider; Trigger child: JumpPad
-    ///   KillSurface_S/M_X    root: base collider; Kill child: trigger + KillZone
-    ///   Shard_Day / _Night   root: trigger + Shard; Visual bobs (Day-only or Night-only, GDD §4)
+    ///   JumpPad_X            root: stone collider, PhaseObject; Trigger child: JumpPad
+    ///   KillSurface_S/M_X    root: base collider, PhaseObject; Kill child: trigger + KillSurface
+    ///   Shard_Day / _Night   root: trigger + Shard + PhaseObject; Visual bobs (GDD §4)
+    ///   KillPlane            invisible 40 x 40 m trigger + KillSurface; put one under each section
     ///
     /// Menu commands (both safe to run again):
     ///   Build Obstacle Prefabs      – creates or updates the prefabs in place (same GUIDs)
@@ -68,6 +72,7 @@ namespace SunSwitch.Art.EditorTools
             count += BuildPhased("KillSurface_S", root => BuildKillSurface(root, "Obstacle_KillSurface_S", 2f), phaseMats);
             count += BuildPhased("KillSurface_M", root => BuildKillSurface(root, "Obstacle_KillSurface_M", 4f), phaseMats);
             count += BuildPhased("Shard", BuildShard, shardMats);
+            count += BuildSingle("KillPlane", BuildKillPlane);
             AssetDatabase.SaveAssets();
             Debug.Log($"[Sun Switch] Built {count} obstacle prefabs in {VariantDir}.");
         }
@@ -112,8 +117,10 @@ namespace SunSwitch.Art.EditorTools
             if (AssetDatabase.LoadAssetAtPath<GameObject>(basePath) != null)
             {
                 var root = PrefabUtility.LoadPrefabContents(basePath);
+                PhaseHookup.RemoveMissingScripts(root);
                 build(root);
                 SetMaterial(root, mats.ContainsKey("Both") ? mats["Both"] : mats["Day"]);
+                PhaseHookup.AddPhaseObject(root);
                 basePrefab = PrefabUtility.SaveAsPrefabAsset(root, basePath);
                 PrefabUtility.UnloadPrefabContents(root);
             }
@@ -122,6 +129,7 @@ namespace SunSwitch.Art.EditorTools
                 var root = new GameObject(name);
                 build(root);
                 SetMaterial(root, mats.ContainsKey("Both") ? mats["Both"] : mats["Day"]);
+                PhaseHookup.AddPhaseObject(root);
                 basePrefab = PrefabUtility.SaveAsPrefabAsset(root, basePath);
                 Object.DestroyImmediate(root);
             }
@@ -134,6 +142,7 @@ namespace SunSwitch.Art.EditorTools
                 {
                     var v = PrefabUtility.LoadPrefabContents(path);
                     SetMaterial(v, mat);
+                    PhaseHookup.SetPhase(v, phase);
                     PrefabUtility.SaveAsPrefabAsset(v, path);
                     PrefabUtility.UnloadPrefabContents(v);
                 }
@@ -142,12 +151,35 @@ namespace SunSwitch.Art.EditorTools
                     var v = (GameObject)PrefabUtility.InstantiatePrefab(basePrefab);
                     v.name = $"{name}_{phase}";
                     SetMaterial(v, mat);
+                    PhaseHookup.SetPhase(v, phase);
                     PrefabUtility.SaveAsPrefabAsset(v, path);
                     Object.DestroyImmediate(v);
                 }
                 count++;
             }
             return count;
+        }
+
+        /// One prefab with no phase variants (always solid / always active).
+        static int BuildSingle(string name, System.Action<GameObject> build)
+        {
+            string path = $"{VariantDir}/{name}.prefab";
+            if (AssetDatabase.LoadAssetAtPath<GameObject>(path) != null)
+            {
+                var root = PrefabUtility.LoadPrefabContents(path);
+                PhaseHookup.RemoveMissingScripts(root);
+                build(root);
+                PrefabUtility.SaveAsPrefabAsset(root, path);
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+            else
+            {
+                var root = new GameObject(name);
+                build(root);
+                PrefabUtility.SaveAsPrefabAsset(root, path);
+                Object.DestroyImmediate(root);
+            }
+            return 1;
         }
 
         static void BuildKillBar(GameObject root)
@@ -163,12 +195,12 @@ namespace SunSwitch.Art.EditorTools
             body.isKinematic = true;
             body.useGravity = false;
             body.interpolation = RigidbodyInterpolation.Interpolate;
-            GetOrAdd<Spinner>(arm);
+            GetOrAdd<SpinningBar>(arm);
             var hit = GetOrAdd<BoxCollider>(arm);
             hit.isTrigger = true;
             hit.center = Vector3.zero;
             hit.size = new Vector3(BarLength, BarThickness, BarThickness);
-            GetOrAdd<KillZone>(arm);
+            GetOrAdd<KillSurface>(arm);
             Visual(arm, "Obstacle_KillBar_Bar");
         }
 
@@ -206,7 +238,18 @@ namespace SunSwitch.Art.EditorTools
             box.isTrigger = true;
             box.center = Vector3.zero;
             box.size = new Vector3(size - 0.1f, 0.5f, size - 0.1f);
-            GetOrAdd<KillZone>(kill);
+            GetOrAdd<KillSurface>(kill);
+        }
+
+        static void BuildKillPlane(GameObject root)
+        {
+            // Invisible catch-all under a section, so a fall mid-tower doesn't have to reach the
+            // void line far below. Top face at the pivot; scale x/z per section if needed.
+            var box = GetOrAdd<BoxCollider>(root);
+            box.isTrigger = true;
+            box.center = new Vector3(0, -0.5f, 0);
+            box.size = new Vector3(40f, 1f, 40f);
+            GetOrAdd<KillSurface>(root);
         }
 
         static void BuildShard(GameObject root)

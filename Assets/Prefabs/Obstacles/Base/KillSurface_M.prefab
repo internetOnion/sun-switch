@@ -100,7 +100,7 @@ GameObject:
   m_Component:
   - component: {fileID: 7838416102306687649}
   - component: {fileID: 812703951300078580}
-  - component: {fileID: 5004964227795647071}
+  - component: {fileID: 614146414198609980}
   m_Layer: 0
   m_Name: Kill
   m_TagString: Untagged
@@ -144,7 +144,7 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 3.9, y: 0.5, z: 3.9}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &5004964227795647071
+--- !u!114 &614146414198609980
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -153,10 +153,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 6319082322176510879}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d908b92197a84de8972ea06717f581b4, type: 3}
+  m_Script: {fileID: 11500000, guid: 5c7038e6d59fb47db82c98ff654456be, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SunSwitch.Art.KillZone
-  playerTag: Player
+  m_EditorClassIdentifier: Assembly-CSharp::SunSwitch.Obstacles.KillSurface
 --- !u!1 &7357152715104476656
 GameObject:
   m_ObjectHideFlags: 0
@@ -167,6 +166,7 @@ GameObject:
   m_Component:
   - component: {fileID: 9096358112285997460}
   - component: {fileID: 1794392412334837077}
+  - component: {fileID: 3960507674192017609}
   m_Layer: 0
   m_Name: KillSurface_M
   m_TagString: Untagged
@@ -212,3 +212,22 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 4, y: 0.1, z: 4}
   m_Center: {x: 0, y: 0.05, z: 0}
+--- !u!114 &3960507674192017609
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7357152715104476656}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 058b274478ad048399b5d141f03e4fc6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SunSwitch.Core.PhaseObject
+  phaseTag: 2
+  ghostMaterial: {fileID: 0}
+  renderers:
+  - {fileID: 1347756157826042648}
+  colliders:
+  - {fileID: 1794392412334837077}
+  - {fileID: 812703951300078580}

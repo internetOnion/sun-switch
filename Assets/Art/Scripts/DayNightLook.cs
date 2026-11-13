@@ -1,4 +1,5 @@
 using System;
+using SunSwitch.Core;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -8,9 +9,11 @@ namespace SunSwitch.Art
     /// The world's Day / Night presentation (GDD §2 "Switch presentation"): cross-fades the
     /// sun/moon light (colour, intensity, angle), the StorybookSky, fog and ambient light.
     ///
-    /// One per scene. The phase system calls DayNightLook.Instance.SetDay(isDay) when the
-    /// world switches; anything else that follows the phase (e.g. the Lightkeeper's lantern)
-    /// listens to DayNightLook.Changed. Toggle "Is Day" in the Inspector to preview a phase.
+    /// One per scene. In Play mode it follows WorldPhase by itself: every OnPhaseChanged fades
+    /// to the new phase, or snaps when WorldPhase.LastChangeInstant is set (respawn). Without a
+    /// WorldPhase (art sandboxes) SetDay can be called directly. Anything else that follows the
+    /// phase (e.g. the Lightkeeper's lantern) listens to DayNightLook.Changed. Toggle "Is Day"
+    /// in the Inspector to preview a phase.
     /// </summary>
     [ExecuteAlways]
     [DisallowMultipleComponent]
@@ -70,6 +73,7 @@ namespace SunSwitch.Art
         float blend;        // 0 = Day, 1 = Night (what is shown now)
         float blendFrom;
         float fadeT = 1f;
+        WorldPhase world;
 
         public bool IsDay => isDay;
 
@@ -94,12 +98,31 @@ namespace SunSwitch.Art
             fadeT = 1f;
             Apply(Target);
             Changed?.Invoke(isDay, true);
+            FollowWorldPhase();
         }
+
+        // WorldPhase may not exist yet in OnEnable (scene load order), so try again here.
+        void Start() => FollowWorldPhase();
 
         void OnDisable()
         {
             if (Instance == this) Instance = null;
+            if (world != null)
+            {
+                world.OnPhaseChanged -= HandlePhaseChanged;
+                world = null;
+            }
         }
+
+        void FollowWorldPhase()
+        {
+            if (!Application.isPlaying || world != null || WorldPhase.Instance == null) return;
+            world = WorldPhase.Instance;
+            world.OnPhaseChanged += HandlePhaseChanged;
+            SetDay(world.Current == Phase.Day, instant: true);
+        }
+
+        void HandlePhaseChanged(Phase phase) => SetDay(phase == Phase.Day, world.LastChangeInstant);
 
         void OnValidate()
         {

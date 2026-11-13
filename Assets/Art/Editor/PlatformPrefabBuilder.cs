@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using SunSwitch.Obstacles;
+using SunSwitch.Player;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -10,14 +12,19 @@ namespace SunSwitch.Art.EditorTools
     /// the phase materials and the platform sandbox scene.
     ///
     /// Prefab layout (pivot = top surface centre, except walls = bottom centre):
-    ///   Platform_X            root: BoxCollider (never scaled)
+    ///   Platform_X            root: BoxCollider (never scaled), PhaseObject
     ///   └─ Visual             real-size mesh + material, safe to replace with final art
+    ///   Platform_Moving_X     + MovingPlatform, with PointA / PointB children for its ends
+    ///   Checkpoint            Both platform + Beacon; Trigger child: Checkpoint, Spawn point,
+    ///                         Lit (glow + light, switched on once the checkpoint is reached)
+    ///
+    /// Variants set the phase material and the PhaseObject tag + ghost material.
     ///
     /// Menu commands:
     ///   Build Grey-box Platforms  – creates everything from scratch. Overwrites the prefabs,
     ///                               so placed instances may lose overrides. Grey-box only.
-    ///   Apply Storybook Look      – safe at any time: updates materials and meshes inside the
-    ///                               existing prefabs without replacing them.
+    ///   Update Platform Prefabs   – safe at any time: updates materials, meshes and gameplay
+    ///                               components inside the existing prefabs without replacing them.
     /// </summary>
     public static class PlatformPrefabBuilder
     {
@@ -62,6 +69,7 @@ namespace SunSwitch.Art.EditorTools
         static readonly Color CreamColor = Hex("FFF5DE"); // cloud cream
         const float BeaconHeight = 2.5f;
         const float BeaconRadius = 0.125f;
+        const float MovingTravel = 6f;   // default distance between PointA and PointB (m)
 
         // ---------------------------------------------------------------- menu commands
 
@@ -73,13 +81,13 @@ namespace SunSwitch.Art.EditorTools
                     "Rebuild platform prefabs?",
                     "This replaces every prefab in Assets/Prefabs/Platforms. Hand edits are lost and platforms " +
                     "already placed in scenes may lose their overrides.\n\nTo only refresh the look, use " +
-                    "Sun Switch > Art > Apply Storybook Look instead.",
+                    "Sun Switch > Art > Update Platform Prefabs instead.",
                     "Rebuild", "Cancel"))
                 return;
 
             EnsureFolder(BaseDir);
             EnsureFolder(SandboxDir);
-            var mats = ConfigureMaterials(out var beacon);
+            var mats = ConfigureMaterials(out var beacon, out var beaconLit);
 
             var variants = new List<(Spec spec, Phase phase, GameObject prefab)>();
             foreach (var spec in Specs)
@@ -88,6 +96,7 @@ namespace SunSwitch.Art.EditorTools
                 var box = spec.Shape == Shape.Box ? root.AddComponent<BoxCollider>() : null;
                 if (box != null) { box.center = spec.Centre; box.size = spec.Size; }
                 ApplyGeometry(root, spec, mats[Phase.Both], beacon);
+                ApplyGameplay(root, spec, beaconLit);
                 var basePrefab = PrefabUtility.SaveAsPrefabAsset(root, $"{BaseDir}/{spec.Name}.prefab");
                 Object.DestroyImmediate(root);
 
@@ -107,11 +116,11 @@ namespace SunSwitch.Art.EditorTools
             Debug.Log($"[Sun Switch] Built {variants.Count} platform prefabs in {VariantDir}.");
         }
 
-        [MenuItem("Sun Switch/Art/Apply Storybook Look")]
-        public static void ApplyStorybookLook()
+        [MenuItem("Sun Switch/Art/Update Platform Prefabs")]
+        public static void UpdatePrefabs()
         {
-            var mats = ConfigureMaterials(out var beacon);
-            int updated = 0;
+            var mats = ConfigureMaterials(out var beacon, out var beaconLit);
+            int updated = 0, variants = 0;
             foreach (var spec in Specs)
             {
                 string path = $"{BaseDir}/{spec.Name}.prefab";
@@ -122,12 +131,25 @@ namespace SunSwitch.Art.EditorTools
                 }
                 var root = PrefabUtility.LoadPrefabContents(path);
                 ApplyGeometry(root, spec, mats[Phase.Both], beacon);
+                ApplyGameplay(root, spec, beaconLit);
                 PrefabUtility.SaveAsPrefabAsset(root, path);
                 PrefabUtility.UnloadPrefabContents(root);
                 updated++;
+
+                if (!spec.Phased) continue;
+                foreach (Phase phase in System.Enum.GetValues(typeof(Phase)))
+                {
+                    string vpath = $"{VariantDir}/{spec.Name}_{phase}.prefab";
+                    if (AssetDatabase.LoadAssetAtPath<GameObject>(vpath) == null) continue;
+                    var v = PrefabUtility.LoadPrefabContents(vpath);
+                    PhaseHookup.SetPhase(v, phase.ToString());
+                    PrefabUtility.SaveAsPrefabAsset(v, vpath);
+                    PrefabUtility.UnloadPrefabContents(v);
+                    variants++;
+                }
             }
             AssetDatabase.SaveAssets();
-            Debug.Log($"[Sun Switch] Applied storybook look to {updated} base prefabs (variants inherit it).");
+            Debug.Log($"[Sun Switch] Updated {updated} base prefabs and {variants} phase variants.");
         }
 
         // ---------------------------------------------------------------- geometry
@@ -171,11 +193,71 @@ namespace SunSwitch.Art.EditorTools
             }
         }
 
+        /// Gameplay components from Assets/Scripts, set up in place on a base prefab.
+        static void ApplyGameplay(GameObject root, Spec spec, Material beaconLit)
+        {
+            if (spec.Name == "Platform_Moving")
+            {
+                var mover = GetOrAdd<MovingPlatform>(root);
+                var a = GetOrCreateChild(root, "PointA");
+                var b = GetOrCreateChild(root, "PointB");
+                var so = new SerializedObject(mover);
+                // Only place the ends the first time; designers move them per instance.
+                if (so.FindProperty("pointA").objectReferenceValue == null) a.transform.localPosition = Vector3.zero;
+                if (so.FindProperty("pointB").objectReferenceValue == null) b.transform.localPosition = new Vector3(MovingTravel, 0, 0);
+                so.FindProperty("pointA").objectReferenceValue = a.transform;
+                so.FindProperty("pointB").objectReferenceValue = b.transform;
+                so.ApplyModifiedPropertiesWithoutUndo();
+            }
+
+            if (spec.Name == "Checkpoint") ApplyCheckpoint(root, spec, beaconLit);
+
+            if (spec.Phased) PhaseHookup.AddPhaseObject(root);
+        }
+
+        static void ApplyCheckpoint(GameObject root, Spec spec, Material beaconLit)
+        {
+            // Reached state: a glowing cap and a warm light on top of the beacon (off until touched).
+            var beacon = root.transform.Find("Beacon");
+            var lit = GetOrCreateChild(root, "Lit");
+            lit.transform.localPosition = beacon.localPosition + new Vector3(0, BeaconHeight / 2f, 0);
+            lit.transform.localRotation = Quaternion.identity;
+            var cap = GetOrCreateChild(lit, "Glow");
+            cap.transform.localPosition = Vector3.zero;
+            GetOrAdd<MeshFilter>(cap).sharedMesh = GreyboxMeshes.Cylinder("Mesh_Checkpoint_Glow", 0.24f, 0.4f, 12);
+            GetOrAdd<MeshRenderer>(cap).sharedMaterial = beaconLit;
+            var light = GetOrAdd<Light>(lit);
+            light.type = LightType.Point;
+            light.color = DayColor;
+            light.range = 5f;
+            light.intensity = 2f;
+            light.shadows = LightShadows.None;
+            lit.SetActive(false);   // Checkpoint switches it on; saved off so scenes show the unreached look
+
+            var spawn = GetOrCreateChild(root, "Spawn");
+            spawn.transform.localPosition = Vector3.zero;
+            spawn.transform.localRotation = Quaternion.identity;
+
+            // Trigger sits above the platform, not on its solid collider (see Checkpoint).
+            var trigger = GetOrCreateChild(root, "Trigger");
+            trigger.transform.localPosition = new Vector3(0, 1f, 0);
+            var box = GetOrAdd<BoxCollider>(trigger);
+            box.isTrigger = true;
+            box.center = Vector3.zero;
+            box.size = new Vector3(spec.Size.x - 0.4f, 2f, spec.Size.z - 0.4f);
+            var checkpoint = GetOrAdd<Checkpoint>(trigger);
+            var so = new SerializedObject(checkpoint);
+            so.FindProperty("spawnPoint").objectReferenceValue = spawn.transform;
+            so.FindProperty("activeIndicator").objectReferenceValue = lit;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
         static GameObject SaveVariant(GameObject basePrefab, Spec spec, Phase phase, Material mat)
         {
             var inst = (GameObject)PrefabUtility.InstantiatePrefab(basePrefab);
             inst.name = $"{spec.Name}_{phase}";
             inst.transform.Find("Visual").GetComponent<MeshRenderer>().sharedMaterial = mat;
+            PhaseHookup.SetPhase(inst, phase.ToString());
             var prefab = PrefabUtility.SaveAsPrefabAsset(inst, $"{VariantDir}/{inst.name}.prefab");
             Object.DestroyImmediate(inst);
             return prefab;
@@ -209,7 +291,7 @@ namespace SunSwitch.Art.EditorTools
 
         // ---------------------------------------------------------------- materials
 
-        static Dictionary<Phase, Material> ConfigureMaterials(out Material beacon)
+        static Dictionary<Phase, Material> ConfigureMaterials(out Material beacon, out Material beaconLit)
         {
             EnsureFolder(MaterialDir);
             var lit = Shader.Find(LitShader);
@@ -228,9 +310,12 @@ namespace SunSwitch.Art.EditorTools
             Ghost("M_Ghost_Day", ghost, DayColor, new Color(1f, 0.9f, 0.62f));
             Ghost("M_Ghost_Night", ghost, NightColor, new Color(0.75f, 0.8f, 1f));
 
+            // The pole is plain cream; the gold glow (beaconLit) only shows once the checkpoint is reached.
             beacon = Storybook("M_Checkpoint_Beacon", lit, CreamColor, new Color(0.85f, 0.75f, 0.65f));
-            beacon.SetColor("_EmissionColor", DayColor * 1.5f);
-            beacon.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
+            beacon.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
+            beaconLit = Storybook("M_Checkpoint_Lit", lit, CreamColor, new Color(0.95f, 0.85f, 0.7f));
+            beaconLit.SetColor("_EmissionColor", DayColor * 2.5f);
+            beaconLit.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
 
             AssetDatabase.SaveAssets();
             return mats;

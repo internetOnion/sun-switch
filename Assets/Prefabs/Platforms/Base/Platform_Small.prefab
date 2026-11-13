@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 7609666865261300990}
   - component: {fileID: 4006819822398149284}
+  - component: {fileID: 2038290352885275381}
   m_Layer: 0
   m_Name: Platform_Small
   m_TagString: Untagged
@@ -54,6 +55,24 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 2, y: 0.5, z: 2}
   m_Center: {x: 0, y: -0.25, z: 0}
+--- !u!114 &2038290352885275381
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7695778731697001796}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 058b274478ad048399b5d141f03e4fc6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SunSwitch.Core.PhaseObject
+  phaseTag: 2
+  ghostMaterial: {fileID: 0}
+  renderers:
+  - {fileID: 7451998726642718274}
+  colliders:
+  - {fileID: 4006819822398149284}
 --- !u!1 &9191946140912118624
 GameObject:
   m_ObjectHideFlags: 0
