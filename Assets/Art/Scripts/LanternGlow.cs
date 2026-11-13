@@ -6,8 +6,9 @@ namespace SunSwitch.Art
     /// The Lightkeeper's lantern: glows sun gold in Day and moon blue in Night, and lights the
     /// ground around the player a little (helps reading ghost platforms at night).
     ///
-    /// The phase system calls SetDay(bool) when the world switches; the colour cross-fades over
-    /// the same 0.25 s as the world lighting (GDD §2). Toggle "Is Day" in the Inspector to preview.
+    /// Follows DayNightLook automatically (its Changed event); SetDay(bool) also works on its own.
+    /// The colour cross-fades over the same 0.25 s as the world lighting (GDD §2).
+    /// Toggle "Is Day" in the Inspector to preview.
     /// </summary>
     [ExecuteAlways]
     public class LanternGlow : MonoBehaviour
@@ -44,8 +45,29 @@ namespace SunSwitch.Art
 
         void OnEnable()
         {
+            DayNightLook.Changed += OnPhaseChanged;
+            if (DayNightLook.Instance != null) isDay = DayNightLook.CurrentIsDay;
             fadeT = 1f;
             Apply(Target);
+        }
+
+        void OnDisable()
+        {
+            DayNightLook.Changed -= OnPhaseChanged;
+        }
+
+        void OnPhaseChanged(bool day, bool instant)
+        {
+            if (instant)
+            {
+                isDay = day;
+                fadeT = 1f;
+                Apply(Target);
+            }
+            else
+            {
+                SetDay(day);
+            }
         }
 
         void OnValidate()

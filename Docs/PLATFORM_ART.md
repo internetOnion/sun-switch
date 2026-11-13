@@ -14,7 +14,8 @@ Owner: platforms, platform prefabs, phase materials, character visual.
 | `Assets/Art/Editor/` | Platform art | Platform tools (`Sun Switch > Art > …`) |
 | `Assets/Art/Characters/Lightkeeper/` | Character art | Lightkeeper model (KayKit), lantern, animator controller |
 | `Assets/Art/Materials/Character/` | Character art | `M_Lightkeeper`, `M_LanternGlow` |
-| `Assets/Art/Scripts/` | Character art | `LanternGlow` (runtime) |
+| `Assets/Art/Materials/Sky/` | Look & feel | `M_StorybookSky` |
+| `Assets/Art/Scripts/` | Character art, look & feel | `LanternGlow`, `DayNightLook`, `DayNightDebugToggle` (runtime) |
 | `Assets/Prefabs/Characters/` | Character art | `Lightkeeper.prefab` |
 | `Assets/Scenes/Sandbox/Platforms_Sandbox.unity` | Platform art | Preview / test scene, not in Build Settings |
 | `ArtSource/` (repo root, outside `Assets/`) | Platform art | Blender `.blend` sources; only exported `.fbx` goes into `Assets/` |
@@ -71,6 +72,24 @@ The final platform visuals are floating sky-ruins: flat paved tops (exactly at t
 - Nothing visual sticks out past the collider footprint. The hanging rock is decoration only and has no collider.
 - Vertex colours shade the parts (paving, grout, sides, rock); the phase colour multiplies on top.
 
+## Day / Night presentation
+
+GDD §2 "Switch presentation": on every phase switch the world cross-fades over **0.25 s**.
+
+| | Day | Night |
+| --- | --- | --- |
+| Sun / moon light | warm cream, 1.15, from (50°, −30°) | moon blue, 0.55, from (60°, −10°) |
+| Sky (`SunSwitch/StorybookSky`) | sky blue → cream horizon, cloud wisps | night indigo → moon-blue horizon, stars |
+| Fog (exp²) | pale haze `#DBE3E6`, 0.006 | deep indigo `#333B6B`, 0.008 |
+| Ambient (sky / equator / ground) | cool blue / warm grey / earth | indigo shades |
+
+- **`DayNightLook`** (one per scene) drives all of it. The phase system calls `DayNightLook.Instance.SetDay(isDay)` when the world switches; `SetDay(isDay, instant: true)` skips the fade (respawn, scene load). Anything else that follows the phase listens to the static `DayNightLook.Changed` event. The Lightkeeper's `LanternGlow` already does.
+- All values are in the component's Inspector (Day / Night blocks). Toggle *Is Day* to preview Night in the editor.
+- The sky blends on the global shader float `_SunSwitchNight` (0 = Day, 1 = Night), so the material asset never changes at runtime. Other shaders can read it too.
+- Ambient uses a three-colour probe set by script (sky ambient can't be re-baked every frame), so scenes don't need baked lighting.
+- **Setup:** `Sun Switch > Art > Add Day-Night Look To Open Scene` adds the sky, the `DayNightLook` (linked to the scene's directional light) and, in sandbox scenes only, `DayNightDebugToggle` (press **T** in Play mode). Safe to run again. Run it on `Main.unity` once it exists. Section scenes load additively, so they don't need their own.
+- Fog stays on in both phases. URP strips fog shader variants from builds when no scene uses fog, so keep the setup in a scene that's in Build Settings.
+
 ## Needs agreement with the gameplay-logic owner
 
 - Name and fields of the phase component (e.g. `PhaseObject` with a Day / Night / Both enum — not Unity tags).
@@ -102,7 +121,7 @@ Lightkeeper        model root: Animator (Humanoid, AC_Lightkeeper), faces +Z, pi
 
 ### Hand-off to phase core (P1)
 
-- Call `LanternGlow.SetDay(bool isDay)` on the player's lantern when the world switches. It fades over 0.25 s, the same as the world lighting.
+- Nothing to wire for the lantern: it follows `DayNightLook` (see *Day / Night presentation*). Calling `DayNightLook.Instance.SetDay(isDay)` on each switch is enough.
 
 ### Ink on skinned meshes
 
