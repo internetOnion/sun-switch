@@ -8,6 +8,14 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 5305213404456286655, guid: e7fc143facf0243479415bbeef42fa85, type: 3}
+      propertyPath: phaseTag
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5305213404456286655, guid: e7fc143facf0243479415bbeef42fa85, type: 3}
+      propertyPath: ghostMaterial
+      value: 
+      objectReference: {fileID: 2100000, guid: 7022c800d2b324007996a04238559fdf, type: 2}
     - target: {fileID: 5953939952803606421, guid: e7fc143facf0243479415bbeef42fa85, type: 3}
       propertyPath: m_Name
       value: KillSurface_S_Night

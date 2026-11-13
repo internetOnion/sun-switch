@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 8803433711966155037}
   - component: {fileID: 5954175938854324094}
+  - component: {fileID: 5305213404456286655}
   m_Layer: 0
   m_Name: KillSurface_S
   m_TagString: Untagged
@@ -55,6 +56,25 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 2, y: 0.1, z: 2}
   m_Center: {x: 0, y: 0.05, z: 0}
+--- !u!114 &5305213404456286655
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5953939952803606421}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 058b274478ad048399b5d141f03e4fc6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SunSwitch.Core.PhaseObject
+  phaseTag: 2
+  ghostMaterial: {fileID: 0}
+  renderers:
+  - {fileID: 8759588836113990053}
+  colliders:
+  - {fileID: 5954175938854324094}
+  - {fileID: 6297908116737549110}
 --- !u!1 &6455126792332676342
 GameObject:
   m_ObjectHideFlags: 0
@@ -65,7 +85,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1625275720647268533}
   - component: {fileID: 6297908116737549110}
-  - component: {fileID: 1820611190240511318}
+  - component: {fileID: 864465923384783597}
   m_Layer: 0
   m_Name: Kill
   m_TagString: Untagged
@@ -109,7 +129,7 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1.9, y: 0.5, z: 1.9}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &1820611190240511318
+--- !u!114 &864465923384783597
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -118,10 +138,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 6455126792332676342}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d908b92197a84de8972ea06717f581b4, type: 3}
+  m_Script: {fileID: 11500000, guid: 5c7038e6d59fb47db82c98ff654456be, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SunSwitch.Art.KillZone
-  playerTag: Player
+  m_EditorClassIdentifier: Assembly-CSharp::SunSwitch.Obstacles.KillSurface
 --- !u!1 &6846347750242121701
 GameObject:
   m_ObjectHideFlags: 0

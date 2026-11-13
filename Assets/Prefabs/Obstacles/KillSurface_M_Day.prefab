@@ -12,6 +12,14 @@ PrefabInstance:
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
       objectReference: {fileID: 2100000, guid: e7de3c1a091e349bfa7356b75efabec3, type: 2}
+    - target: {fileID: 3960507674192017609, guid: a5cbdce7c61d9493a86175830c89badb, type: 3}
+      propertyPath: phaseTag
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3960507674192017609, guid: a5cbdce7c61d9493a86175830c89badb, type: 3}
+      propertyPath: ghostMaterial
+      value: 
+      objectReference: {fileID: 2100000, guid: 96de52bb076e0410eacdd1da29319af2, type: 2}
     - target: {fileID: 7357152715104476656, guid: a5cbdce7c61d9493a86175830c89badb, type: 3}
       propertyPath: m_Name
       value: KillSurface_M_Day

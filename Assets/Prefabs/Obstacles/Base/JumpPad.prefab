@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 572799861772345732}
   - component: {fileID: 7062828972367019086}
-  - component: {fileID: 4023007115439671703}
+  - component: {fileID: 2622626078348360837}
   m_Layer: 0
   m_Name: Trigger
   m_TagString: Untagged
@@ -54,7 +54,7 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1.7, y: 0.4, z: 1.7}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &4023007115439671703
+--- !u!114 &2622626078348360837
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -63,12 +63,14 @@ MonoBehaviour:
   m_GameObject: {fileID: 183530474827284936}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d1ecd29a603c46d98d219e0510665787, type: 3}
+  m_Script: {fileID: 11500000, guid: 021a08b3c7041447e88e65ecc06ebbbe, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SunSwitch.Art.JumpPad
-  launchHeight: 5
-  playerTag: Player
+  m_EditorClassIdentifier: Assembly-CSharp::SunSwitch.Obstacles.JumpPad
+  launchSpeed: 14
+  direction: {x: 0, y: 1, z: 0}
+  retriggerDelay: 0.2
   visual: {fileID: 524720815475474768}
+  launchSound: {fileID: 0}
 --- !u!1 &2407494541316180493
 GameObject:
   m_ObjectHideFlags: 0
@@ -169,6 +171,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5428481318960846704}
   - component: {fileID: 2418562429893928907}
+  - component: {fileID: 8654640705897657423}
   m_Layer: 0
   m_Name: JumpPad
   m_TagString: Untagged
@@ -214,3 +217,22 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 2, y: 0.17, z: 2}
   m_Center: {x: 0, y: 0.085, z: 0}
+--- !u!114 &8654640705897657423
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4418697103794345411}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 058b274478ad048399b5d141f03e4fc6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SunSwitch.Core.PhaseObject
+  phaseTag: 2
+  ghostMaterial: {fileID: 0}
+  renderers:
+  - {fileID: 95269446014015413}
+  colliders:
+  - {fileID: 2418562429893928907}
+  - {fileID: 7062828972367019086}

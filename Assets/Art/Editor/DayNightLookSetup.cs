@@ -1,4 +1,5 @@
 using SunSwitch.Art;
+using SunSwitch.Core;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -10,7 +11,9 @@ namespace SunSwitch.Art.EditorTools
     ///
     /// Gives the open scene the Day / Night presentation: the StorybookSky skybox, a DayNightLook
     /// driving the scene's directional light, fog and ambient light, and (in sandbox scenes only)
-    /// a DayNightDebugToggle on T. Safe to run again; it reuses what is already there.
+    /// a DayNightDebugToggle on T plus a WorldPhase, so T switches platforms and ghosts too.
+    /// Gameplay scenes get their WorldPhase from the Managers object instead. Safe to run again;
+    /// it reuses what is already there.
     /// </summary>
     public static class DayNightLookSetup
     {
@@ -58,6 +61,8 @@ namespace SunSwitch.Art.EditorTools
             bool sandbox = scene.path.Contains("/Sandbox/");
             if (sandbox && look.GetComponent<DayNightDebugToggle>() == null)
                 Undo.AddComponent<DayNightDebugToggle>(look.gameObject);
+            if (sandbox && Object.FindFirstObjectByType<WorldPhase>(FindObjectsInactive.Include) == null)
+                Undo.AddComponent<WorldPhase>(look.gameObject);
 
             // Re-apply so the scene saves the Day look (fog, ambient, light) as its starting state.
             look.enabled = false;

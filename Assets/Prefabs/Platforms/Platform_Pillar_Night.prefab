@@ -12,6 +12,14 @@ PrefabInstance:
       propertyPath: m_Name
       value: Platform_Pillar_Night
       objectReference: {fileID: 0}
+    - target: {fileID: 3777238745185049728, guid: c06837bae5d154e9cba5b38d6f9493c8, type: 3}
+      propertyPath: phaseTag
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3777238745185049728, guid: c06837bae5d154e9cba5b38d6f9493c8, type: 3}
+      propertyPath: ghostMaterial
+      value: 
+      objectReference: {fileID: 2100000, guid: 7022c800d2b324007996a04238559fdf, type: 2}
     - target: {fileID: 4253270457089854986, guid: c06837bae5d154e9cba5b38d6f9493c8, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
