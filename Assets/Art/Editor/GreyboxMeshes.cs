@@ -42,8 +42,11 @@ namespace SunSwitch.Art.EditorTools
             var verts = new List<Vector3>();
             var normals = new List<Vector3>();
             var uvs = new List<Vector2>();
+            var faceSizes = new List<Vector2>();
             var tris = new List<int>();
 
+            // UV0 = position on the face in metres, UV1 = face size in metres.
+            // The Storybook shader uses both to ink every face edge, inner edges included.
             void Face(Vector3 n, Vector3 uDir)
             {
                 // v = u x n keeps the winding clockwise when seen from outside (Unity front face).
@@ -56,6 +59,7 @@ namespace SunSwitch.Art.EditorTools
                 for (int k = 0; k < 4; k++) normals.Add(n);
                 float w = u.magnitude * 2f, h = v.magnitude * 2f;
                 uvs.Add(new Vector2(0, 0)); uvs.Add(new Vector2(w, 0)); uvs.Add(new Vector2(w, h)); uvs.Add(new Vector2(0, h));
+                for (int k = 0; k < 4; k++) faceSizes.Add(new Vector2(w, h));
                 tris.AddRange(new[] { i, i + 2, i + 1, i, i + 3, i + 2 });
             }
 
@@ -69,6 +73,7 @@ namespace SunSwitch.Art.EditorTools
             mesh.SetVertices(verts);
             mesh.SetNormals(normals);
             mesh.SetUVs(0, uvs);
+            mesh.SetUVs(1, faceSizes);
             mesh.SetTriangles(tris, 0);
         }
 
@@ -78,6 +83,7 @@ namespace SunSwitch.Art.EditorTools
             var verts = new List<Vector3>();
             var normals = new List<Vector3>();
             var uvs = new List<Vector2>();
+            var faceSizes = new List<Vector2>(); // x = 0: no ink along the wrap-around seam
             var tris = new List<int>();
             float circumference = 2f * Mathf.PI * radius;
 
@@ -93,6 +99,7 @@ namespace SunSwitch.Art.EditorTools
                 var d = Dir(s);
                 verts.Add(d * radius + Vector3.down * hy); normals.Add(d); uvs.Add(new Vector2(s / (float)segments * circumference, 0));
                 verts.Add(d * radius + Vector3.up * hy);   normals.Add(d); uvs.Add(new Vector2(s / (float)segments * circumference, height));
+                faceSizes.Add(new Vector2(0, height)); faceSizes.Add(new Vector2(0, height));
             }
             for (int s = 0; s < segments; s++)
             {
@@ -104,11 +111,13 @@ namespace SunSwitch.Art.EditorTools
             {
                 var n = top ? Vector3.up : Vector3.down;
                 int centre = verts.Count;
-                verts.Add(n * hy); normals.Add(n); uvs.Add(new Vector2(radius, radius));
+                // Caps get no edge ink of their own; the side's top/bottom ink covers the rim.
+                verts.Add(n * hy); normals.Add(n); uvs.Add(new Vector2(radius, radius)); faceSizes.Add(Vector2.zero);
                 for (int s = 0; s <= segments; s++)
                 {
                     var d = Dir(s);
                     verts.Add(d * radius + n * hy); normals.Add(n); uvs.Add(new Vector2(radius + d.x * radius, radius + d.z * radius));
+                    faceSizes.Add(Vector2.zero);
                 }
                 for (int s = 0; s < segments; s++)
                 {
@@ -123,6 +132,7 @@ namespace SunSwitch.Art.EditorTools
             mesh.SetVertices(verts);
             mesh.SetNormals(normals);
             mesh.SetUVs(0, uvs);
+            mesh.SetUVs(1, faceSizes);
             mesh.SetTriangles(tris, 0);
         }
 

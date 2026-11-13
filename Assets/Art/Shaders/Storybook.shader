@@ -25,6 +25,11 @@ Shader "SunSwitch/Storybook"
 
         _OutlineColor ("Ink Colour", Color) = (0.157, 0.137, 0.129, 1)
         _OutlineWidth ("Ink Width (metres)", Range(0, 0.1)) = 0.03
+        _OutlinePixels ("Ink Min Width (pixels)", Range(0, 6)) = 1.8
+        _EdgeInkWidth ("Edge Ink Width (metres)", Range(0, 0.1)) = 0.035
+        _EdgeInkPixels ("Edge Ink Min Width (pixels)", Range(0, 4)) = 1.8
+        _EdgeInkStrength ("Edge Ink Strength", Range(0, 1)) = 0.95
+        _EdgeInkWobble ("Edge Ink Wobble", Range(0, 1)) = 0.5
     }
 
     SubShader
@@ -49,6 +54,11 @@ Shader "SunSwitch/Storybook"
             half4 _EmissionColor;
             half4 _OutlineColor;
             float _OutlineWidth;
+            float _OutlinePixels;
+            float _EdgeInkWidth;
+            float _EdgeInkPixels;
+            half _EdgeInkStrength;
+            half _EdgeInkWobble;
         CBUFFER_END
 
         float Hash13(float3 p)
@@ -62,7 +72,8 @@ Shader "SunSwitch/Storybook"
         {
             float3 i = floor(p);
             float3 f = frac(p);
-            f = f * f * (3.0 - 2.0 * f);
+            // Quintic fade: smooth across cell borders, so no visible creases or lines.
+            f = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
             float a = lerp(Hash13(i + float3(0, 0, 0)), Hash13(i + float3(1, 0, 0)), f.x);
             float b = lerp(Hash13(i + float3(0, 1, 0)), Hash13(i + float3(1, 1, 0)), f.x);
             float c = lerp(Hash13(i + float3(0, 0, 1)), Hash13(i + float3(1, 0, 1)), f.x);
@@ -112,6 +123,8 @@ Shader "SunSwitch/Storybook"
             {
                 float4 positionOS : POSITION;
                 float3 normalOS   : NORMAL;
+                float2 faceUV     : TEXCOORD0; // position on the face, metres
+                float2 faceSize   : TEXCOORD1; // face size, metres (0 = no ink on that axis)
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -121,6 +134,7 @@ Shader "SunSwitch/Storybook"
                 float3 positionWS : TEXCOORD0;
                 float3 normalWS   : TEXCOORD1;
                 float  fogFactor  : TEXCOORD2;
+                float4 face       : TEXCOORD3; // xy = faceUV, zw = faceSize
                 UNITY_VERTEX_INPUT_INSTANCE_ID
                 UNITY_VERTEX_OUTPUT_STEREO
             };
@@ -136,7 +150,20 @@ Shader "SunSwitch/Storybook"
                 o.positionWS = pos.positionWS;
                 o.normalWS = TransformObjectToWorldNormal(input.normalOS);
                 o.fogFactor = ComputeFogFactor(pos.positionCS.z);
+                o.face = float4(input.faceUV, input.faceSize);
                 return o;
+            }
+
+            // 0..1 ink coverage near the edges of the current face, with a hand-drawn wobble.
+            half EdgeInk(float4 face, float3 positionWS)
+            {
+                float d = 1e5;
+                if (face.z > 0.0) d = min(d, min(face.x, face.z - face.x));
+                if (face.w > 0.0) d = min(d, min(face.y, face.w - face.y));
+                float metresPerPixel = max(fwidth(d), 1e-4);
+                float width = max(_EdgeInkWidth, _EdgeInkPixels * metresPerPixel);
+                float wobble = (ValueNoise(positionWS * 7.0) - 0.5) * _EdgeInkWobble * width;
+                return (1.0 - smoothstep(width - metresPerPixel, width + metresPerPixel, d + wobble)) * _EdgeInkStrength;
             }
 
             half4 Frag(Varyings i) : SV_Target
@@ -147,7 +174,9 @@ Shader "SunSwitch/Storybook"
 
                 // Painted surface: low-frequency blotches + fine paper grain.
                 float blotch = Fbm(i.positionWS * _NoiseScale * 0.35);
-                float grain = ValueNoise(i.positionWS * _NoiseScale * 14.0);
+                // Two grain sizes, offset from each other, so the grain doesn't show a grid of cells.
+                float3 grainP = i.positionWS * _NoiseScale * 14.0;
+                float grain = (ValueNoise(grainP) + ValueNoise(grainP * 2.17 + 17.3)) * 0.5;
                 half3 albedo = _BaseColor.rgb;
                 albedo *= 1.0 + (blotch - 0.5) * 2.0 * _BlotchStrength;
                 albedo *= 1.0 + (grain - 0.5) * 2.0 * _GrainStrength;
@@ -187,6 +216,7 @@ Shader "SunSwitch/Storybook"
                 half rim = pow(1.0 - saturate(dot(n, v)), 4.0) * saturate(ndl + 0.3) * _RimStrength;
                 color += _RimColor.rgb * rim * mainLight.color;
                 color += _EmissionColor.rgb;
+                color = lerp(color, _OutlineColor.rgb, EdgeInk(i.face, i.positionWS));
 
                 color = MixFog(color, i.fogFactor);
                 return half4(color, 1.0);
@@ -211,6 +241,7 @@ Shader "SunSwitch/Storybook"
             {
                 float4 positionOS   : POSITION;
                 float3 normalOS     : NORMAL;
+                float2 faceSize     : TEXCOORD1;
                 float4 smoothNormal : TEXCOORD3;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
@@ -227,10 +258,29 @@ Shader "SunSwitch/Storybook"
                 Varyings o = (Varyings)0;
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+
+                // Faces with ink data on both axes already ink every edge (silhouette included),
+                // so skip the hull there to avoid a doubled border. Moved outside the clip volume.
+                if (input.faceSize.x > 0.0 && input.faceSize.y > 0.0)
+                {
+                    o.positionCS = float4(2.0, 2.0, 2.0, 1.0);
+                    return o;
+                }
+
                 float3 dirOS = input.smoothNormal.xyz;
                 if (dot(dirOS, dirOS) < 0.01) dirOS = input.normalOS;
                 float3 dirWS = normalize(TransformObjectToWorldNormal(dirOS));
-                float3 positionWS = TransformObjectToWorld(input.positionOS.xyz) + dirWS * _OutlineWidth;
+                float3 positionWS = TransformObjectToWorld(input.positionOS.xyz);
+
+                // World width up close, but never thinner than _OutlinePixels on screen far away.
+                float width = _OutlineWidth;
+                if (unity_OrthoParams.w < 0.5)
+                {
+                    float distance = length(_WorldSpaceCameraPos - positionWS);
+                    float metresPerPixel = 2.0 * distance / (UNITY_MATRIX_P[1][1] * _ScreenParams.y);
+                    width = max(width, _OutlinePixels * metresPerPixel);
+                }
+                positionWS += dirWS * width;
                 o.positionCS = TransformWorldToHClip(positionWS);
                 o.fogFactor = ComputeFogFactor(o.positionCS.z);
                 return o;
