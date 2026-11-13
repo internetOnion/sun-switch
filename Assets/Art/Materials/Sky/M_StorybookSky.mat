@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: M_StorybookSky
+  m_Shader: {fileID: 4800000, guid: 37f04fba2c584b49b9bc1c0c1efef05e, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs: []
+    m_Ints: []
+    m_Floats:
+    - _BelowFade: 0.3
+    - _BlotchStrength: 0.06
+    - _CloudAmount: 0.45
+    - _CloudScale: 1.6
+    - _HorizonHeight: 0.35
+    - _StarBrightness: 1.4
+    - _StarDensity: 0.5
+    m_Colors:
+    - _DayBottom: {r: 0.72, g: 0.83, b: 0.91, a: 1}
+    - _DayCloud: {r: 1, g: 0.96999997, b: 0.9, a: 1}
+    - _DayHorizon: {r: 1, g: 0.95, b: 0.85, a: 1}
+    - _DayTop: {r: 0.41999996, g: 0.62, b: 0.8, a: 1}
+    - _NightBottom: {r: 0.12999997, g: 0.14999998, b: 0.31999996, a: 1}
+    - _NightCloud: {r: 0.29999998, g: 0.33999997, b: 0.56, a: 1}
+    - _NightHorizon: {r: 0.39999998, g: 0.45, b: 0.72, a: 1}
+    - _NightTop: {r: 0.07999996, g: 0.089999996, b: 0.21999997, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1
