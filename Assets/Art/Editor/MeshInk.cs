@@ -14,6 +14,12 @@ namespace SunSwitch.Art.EditorTools
     ///   UV3 = smoothed normal (for the outline hull)
     /// An edge is inked when it is a mesh boundary or its two faces meet at more than InkAngle.
     /// Triangles next to a gentle (curved) edge also get the outline hull for their silhouette.
+    ///
+    /// Skinned meshes (skinned = true) keep their bone weights and bind poses. Their smoothed
+    /// normal goes in the TANGENT instead, because skinning bends tangents with the bones but
+    /// leaves UV3 in the bind pose; UV3 is then (0, 0, 0, 1) to tell the shader so.
+    /// The edge distances stay valid as long as each triangle moves rigidly, which holds for
+    /// low-poly characters whose parts follow one bone each.
     /// </summary>
     internal static class MeshInk
     {
@@ -21,9 +27,12 @@ namespace SunSwitch.Art.EditorTools
         public const float CurveAngle = 4f;    // gentler than InkAngle but not flat = curved surface
         const float NoInk = 1000f;
 
-        public static void Bake(Mesh mesh)
+        public static void Bake(Mesh mesh, bool skinned = false)
         {
             var positions = mesh.vertices;
+            var boneWeights = skinned ? mesh.boneWeights : null;
+            var bindposes = skinned ? mesh.bindposes : null;
+            bool hasWeights = boneWeights != null && boneWeights.Length == positions.Length;
             var normals = mesh.normals;
             if (normals == null || normals.Length != positions.Length)
             {
@@ -102,6 +111,8 @@ namespace SunSwitch.Art.EditorTools
             var outUv1 = new Vector2[vCount];
             var outUv2 = new Vector2[vCount];
             var outUv3 = new Vector4[vCount];
+            var outTangents = skinned ? new Vector4[vCount] : null;
+            var outWeights = hasWeights ? new BoneWeight[vCount] : null;
 
             for (int t = 0; t < triCount; t++)
             {
@@ -132,7 +143,16 @@ namespace SunSwitch.Art.EditorTools
                     outUv2[dst] = new Vector2(dist[2], flags);
 
                     var s = smoothSum[PosKey(p[k])].normalized;
-                    outUv3[dst] = new Vector4(s.x, s.y, s.z, 0f);
+                    if (skinned)
+                    {
+                        outTangents[dst] = new Vector4(s.x, s.y, s.z, 1f);
+                        outUv3[dst] = new Vector4(0f, 0f, 0f, 1f);
+                    }
+                    else
+                    {
+                        outUv3[dst] = new Vector4(s.x, s.y, s.z, 0f);
+                    }
+                    if (hasWeights) outWeights[dst] = boneWeights[src];
                 }
             }
 
@@ -155,7 +175,19 @@ namespace SunSwitch.Art.EditorTools
                 start += idx.Length;
             }
             mesh.RecalculateBounds();
-            mesh.RecalculateTangents();
+            if (skinned)
+            {
+                mesh.tangents = outTangents;
+                if (hasWeights)
+                {
+                    mesh.boneWeights = outWeights;
+                    mesh.bindposes = bindposes;
+                }
+            }
+            else
+            {
+                mesh.RecalculateTangents();
+            }
         }
 
         static Vector3Int PosKey(Vector3 p) => Vector3Int.RoundToInt(p * 10000f);

@@ -5,6 +5,7 @@
 // - Hand-drawn ink on sharp edges, from per-triangle edge distances baked by MeshInk
 //   (UV1, UV2.x); UV2.y flags: 0 = no data, 1 = baked, 2 = baked + outline hull
 // - Ink outline (inverted hull) for curved silhouettes, along smoothed normals in UV3
+//   (skinned meshes keep them in the tangent so they bend with the bones; see MeshInk)
 // - Vertex colour tints parts of a model (paving, grout, rock) under the phase colour
 Shader "SunSwitch/Storybook"
 {
@@ -246,8 +247,9 @@ Shader "SunSwitch/Storybook"
             {
                 float4 positionOS   : POSITION;
                 float3 normalOS     : NORMAL;
+                float4 tangentOS    : TANGENT;   // skinned meshes: smoothed normal (bent by the bones)
                 float2 inkC         : TEXCOORD2; // y: 0 = no data, 1 = no hull, 2 = hull
-                float4 smoothNormal : TEXCOORD3;
+                float4 smoothNormal : TEXCOORD3; // xyz = smoothed normal; w = 1: use the tangent instead
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -273,7 +275,7 @@ Shader "SunSwitch/Storybook"
                     return o;
                 }
 
-                float3 dirOS = input.smoothNormal.xyz;
+                float3 dirOS = input.smoothNormal.w > 0.5 ? input.tangentOS.xyz : input.smoothNormal.xyz;
                 if (dot(dirOS, dirOS) < 0.01) dirOS = input.normalOS;
                 float3 dirWS = normalize(TransformObjectToWorldNormal(dirOS));
                 float3 positionWS = TransformObjectToWorld(input.positionOS.xyz);
