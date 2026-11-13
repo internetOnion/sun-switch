@@ -2,20 +2,22 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
-using UnityEngine.Rendering;
 
 namespace SunSwitch.Art.EditorTools
 {
     /// <summary>
-    /// Generates the grey-box platform prefabs, their Day / Night / Both variants,
-    /// the phase materials and a sandbox scene to preview them.
+    /// Builds and updates the platform prefabs, their Day / Night / Both variants,
+    /// the phase materials and the platform sandbox scene.
     ///
     /// Prefab layout (pivot = top surface centre, except walls = bottom centre):
     ///   Platform_X            root: BoxCollider (never scaled)
-    ///   └─ Visual             mesh + material, safe to replace with final art
+    ///   └─ Visual             real-size mesh + material, safe to replace with final art
     ///
-    /// Re-running overwrites the prefabs and materials in place (GUIDs are kept), so
-    /// only re-run it during grey-box. Once level designers use the prefabs, edit them by hand.
+    /// Menu commands:
+    ///   Build Grey-box Platforms  – creates everything from scratch. Overwrites the prefabs,
+    ///                               so placed instances may lose overrides. Grey-box only.
+    ///   Apply Storybook Look      – safe at any time: updates materials and meshes inside the
+    ///                               existing prefabs without replacing them.
     /// </summary>
     public static class PlatformPrefabBuilder
     {
@@ -24,6 +26,8 @@ namespace SunSwitch.Art.EditorTools
         const string VariantDir = "Assets/Prefabs/Platforms";
         const string SandboxDir = "Assets/Scenes/Sandbox";
         const string SandboxPath = SandboxDir + "/Platforms_Sandbox.unity";
+        const string LitShader = "SunSwitch/Storybook";
+        const string GhostShader = "SunSwitch/StorybookGhost";
 
         enum Phase { Day, Night, Both }
         enum Shape { Box, Cylinder }
@@ -35,6 +39,7 @@ namespace SunSwitch.Art.EditorTools
             public Vector3 Size;      // metres: width (x), thickness/height (y), depth (z)
             public bool PivotOnTop;   // true for platforms you stand on, false for walls
             public bool Phased = true;
+            public Vector3 Centre => new Vector3(0, PivotOnTop ? -Size.y / 2f : Size.y / 2f, 0);
         }
 
         static readonly Spec[] Specs =
@@ -53,7 +58,11 @@ namespace SunSwitch.Art.EditorTools
         static readonly Color DayColor = Hex("E9B64F");   // sun gold
         static readonly Color NightColor = Hex("6670B8"); // night indigo, lifted so it reads under lighting
         static readonly Color BothColor = Hex("9A958C");  // warm grey stone
-        const float GhostAlpha = 0.3f;
+        static readonly Color CreamColor = Hex("FFF5DE"); // cloud cream
+        const float BeaconHeight = 2.5f;
+        const float BeaconRadius = 0.125f;
+
+        // ---------------------------------------------------------------- menu commands
 
         [MenuItem("Sun Switch/Art/Build Grey-box Platforms")]
         public static void Build()
@@ -61,29 +70,23 @@ namespace SunSwitch.Art.EditorTools
             bool exists = AssetDatabase.LoadAssetAtPath<GameObject>($"{BaseDir}/Platform_Small.prefab") != null;
             if (exists && !EditorUtility.DisplayDialog(
                     "Rebuild platform prefabs?",
-                    "This overwrites every prefab in Assets/Prefabs/Platforms. Any hand edits to them will be lost.",
+                    "This replaces every prefab in Assets/Prefabs/Platforms. Hand edits are lost and platforms " +
+                    "already placed in scenes may lose their overrides.\n\nTo only refresh the look, use " +
+                    "Sun Switch > Art > Apply Storybook Look instead.",
                     "Rebuild", "Cancel"))
                 return;
 
-            EnsureFolder(MaterialDir);
             EnsureFolder(BaseDir);
             EnsureFolder(SandboxDir);
-
-            var mats = new Dictionary<Phase, Material>
-            {
-                [Phase.Day] = GetOrCreateMaterial("M_Phase_Day", DayColor),
-                [Phase.Night] = GetOrCreateMaterial("M_Phase_Night", NightColor),
-                [Phase.Both] = GetOrCreateMaterial("M_Phase_Both", BothColor),
-            };
-            GetOrCreateMaterial("M_Ghost_Day", WithAlpha(DayColor, GhostAlpha), ghost: true);
-            GetOrCreateMaterial("M_Ghost_Night", WithAlpha(NightColor, GhostAlpha), ghost: true);
-            var beacon = GetOrCreateMaterial("M_Checkpoint_Beacon", Hex("FFF5DE"), emission: DayColor * 2f);
+            var mats = ConfigureMaterials(out var beacon);
 
             var variants = new List<(Spec spec, Phase phase, GameObject prefab)>();
             foreach (var spec in Specs)
             {
-                var root = BuildBase(spec, mats[Phase.Both]);
-                if (spec.Name == "Checkpoint") AddBeacon(root, spec, beacon);
+                var root = new GameObject(spec.Name);
+                var box = spec.Shape == Shape.Box ? root.AddComponent<BoxCollider>() : null;
+                if (box != null) { box.center = spec.Centre; box.size = spec.Size; }
+                ApplyGeometry(root, spec, mats[Phase.Both], beacon);
                 var basePrefab = PrefabUtility.SaveAsPrefabAsset(root, $"{BaseDir}/{spec.Name}.prefab");
                 Object.DestroyImmediate(root);
 
@@ -103,52 +106,65 @@ namespace SunSwitch.Art.EditorTools
             Debug.Log($"[Sun Switch] Built {variants.Count} platform prefabs in {VariantDir}.");
         }
 
-        static GameObject BuildBase(Spec spec, Material mat)
+        [MenuItem("Sun Switch/Art/Apply Storybook Look")]
+        public static void ApplyStorybookLook()
         {
-            var root = new GameObject(spec.Name);
-            var centre = new Vector3(0, spec.PivotOnTop ? -spec.Size.y / 2f : spec.Size.y / 2f, 0);
-
-            var visual = GameObject.CreatePrimitive(spec.Shape == Shape.Cylinder ? PrimitiveType.Cylinder : PrimitiveType.Cube);
-            visual.name = "Visual";
-            Object.DestroyImmediate(visual.GetComponent<Collider>());
-            visual.transform.SetParent(root.transform, false);
-            visual.transform.localPosition = centre;
-            // Unity's cylinder primitive is 2 units tall at scale 1.
-            visual.transform.localScale = spec.Shape == Shape.Cylinder
-                ? new Vector3(spec.Size.x, spec.Size.y / 2f, spec.Size.z)
-                : spec.Size;
-            visual.GetComponent<MeshRenderer>().sharedMaterial = mat;
-
-            if (spec.Shape == Shape.Box)
+            var mats = ConfigureMaterials(out var beacon);
+            int updated = 0;
+            foreach (var spec in Specs)
             {
-                var box = root.AddComponent<BoxCollider>();
-                box.center = centre;
-                box.size = spec.Size;
+                string path = $"{BaseDir}/{spec.Name}.prefab";
+                if (AssetDatabase.LoadAssetAtPath<GameObject>(path) == null)
+                {
+                    Debug.LogWarning($"[Sun Switch] {path} not found. Run Build Grey-box Platforms first.");
+                    continue;
+                }
+                var root = PrefabUtility.LoadPrefabContents(path);
+                ApplyGeometry(root, spec, mats[Phase.Both], beacon);
+                PrefabUtility.SaveAsPrefabAsset(root, path);
+                PrefabUtility.UnloadPrefabContents(root);
+                updated++;
             }
-            else
-            {
-                // Round collider lives on its own child so Visual can still be swapped freely.
-                var collision = new GameObject("Collision");
-                collision.transform.SetParent(root.transform, false);
-                collision.transform.localPosition = visual.transform.localPosition;
-                collision.transform.localScale = visual.transform.localScale;
-                var mc = collision.AddComponent<MeshCollider>();
-                mc.sharedMesh = visual.GetComponent<MeshFilter>().sharedMesh;
-                mc.convex = true;
-            }
-            return root;
+            AssetDatabase.SaveAssets();
+            Debug.Log($"[Sun Switch] Applied storybook look to {updated} base prefabs (variants inherit it).");
         }
 
-        static void AddBeacon(GameObject root, Spec spec, Material mat)
+        // ---------------------------------------------------------------- geometry
+
+        /// <summary>Creates or updates Visual (and Collision / Beacon) children in place.</summary>
+        static void ApplyGeometry(GameObject root, Spec spec, Material baseMat, Material beaconMat)
         {
-            var pole = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            pole.name = "Beacon";
-            Object.DestroyImmediate(pole.GetComponent<Collider>());
-            pole.transform.SetParent(root.transform, false);
-            const float height = 2.5f;
-            pole.transform.localPosition = new Vector3(spec.Size.x / 2f - 0.5f, height / 2f, spec.Size.z / 2f - 0.5f);
-            pole.transform.localScale = new Vector3(0.25f, height / 2f, 0.25f);
-            pole.GetComponent<MeshRenderer>().sharedMaterial = mat;
+            var mesh = spec.Shape == Shape.Cylinder
+                ? GreyboxMeshes.Cylinder($"Mesh_{spec.Name}", spec.Size.x / 2f, spec.Size.y)
+                : GreyboxMeshes.Box($"Mesh_{spec.Name}", spec.Size);
+
+            var visual = GetOrCreateChild(root, "Visual");
+            visual.transform.localPosition = spec.Centre;
+            visual.transform.localRotation = Quaternion.identity;
+            visual.transform.localScale = Vector3.one;
+            GetOrAdd<MeshFilter>(visual).sharedMesh = mesh;
+            var renderer = GetOrAdd<MeshRenderer>(visual);
+            if (renderer.sharedMaterial == null) renderer.sharedMaterial = baseMat;
+
+            if (spec.Shape == Shape.Cylinder)
+            {
+                // Round collider lives on its own child so Visual can still be swapped freely.
+                var collision = GetOrCreateChild(root, "Collision");
+                collision.transform.localPosition = spec.Centre;
+                collision.transform.localScale = Vector3.one;
+                var mc = GetOrAdd<MeshCollider>(collision);
+                mc.sharedMesh = mesh;
+                mc.convex = true;
+            }
+
+            if (spec.Name == "Checkpoint")
+            {
+                var beacon = GetOrCreateChild(root, "Beacon");
+                beacon.transform.localPosition = new Vector3(spec.Size.x / 2f - 0.5f, BeaconHeight / 2f, spec.Size.z / 2f - 0.5f);
+                beacon.transform.localScale = Vector3.one;
+                GetOrAdd<MeshFilter>(beacon).sharedMesh = GreyboxMeshes.Cylinder("Mesh_Checkpoint_Beacon", BeaconRadius, BeaconHeight, 12);
+                GetOrAdd<MeshRenderer>(beacon).sharedMaterial = beaconMat;
+            }
         }
 
         static GameObject SaveVariant(GameObject basePrefab, Spec spec, Phase phase, Material mat)
@@ -181,58 +197,94 @@ namespace SunSwitch.Art.EditorTools
             Object.DestroyImmediate(player.GetComponent<Collider>());
             player.transform.position = new Vector3(-2f, 0.9f, 0f);
             player.transform.localScale = new Vector3(0.6f, 0.9f, 0.6f);
-            SceneManager_Move(player, scene);
+            UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(player, scene);
 
             EditorSceneManager.SaveScene(scene, SandboxPath);
             EditorSceneManager.CloseScene(scene, true);
         }
 
-        static void SceneManager_Move(GameObject go, UnityEngine.SceneManagement.Scene scene) =>
-            UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(go, scene);
+        // ---------------------------------------------------------------- materials
 
-        static Material GetOrCreateMaterial(string name, Color color, bool ghost = false, Color? emission = null)
+        static Dictionary<Phase, Material> ConfigureMaterials(out Material beacon)
+        {
+            EnsureFolder(MaterialDir);
+            var lit = Shader.Find(LitShader);
+            var ghost = Shader.Find(GhostShader);
+            if (lit == null || ghost == null)
+                throw new System.InvalidOperationException(
+                    $"[Sun Switch] Shader '{LitShader}' or '{GhostShader}' is missing or failed to compile. Check the Console.");
+
+            var mats = new Dictionary<Phase, Material>
+            {
+                [Phase.Day] = Storybook("M_Phase_Day", lit, DayColor, new Color(0.80f, 0.56f, 0.52f)),
+                [Phase.Night] = Storybook("M_Phase_Night", lit, NightColor, new Color(0.48f, 0.44f, 0.72f)),
+                [Phase.Both] = Storybook("M_Phase_Both", lit, BothColor, new Color(0.62f, 0.60f, 0.74f)),
+            };
+
+            Ghost("M_Ghost_Day", ghost, DayColor, new Color(1f, 0.9f, 0.62f));
+            Ghost("M_Ghost_Night", ghost, NightColor, new Color(0.75f, 0.8f, 1f));
+
+            beacon = Storybook("M_Checkpoint_Beacon", lit, CreamColor, new Color(0.85f, 0.75f, 0.65f));
+            beacon.SetColor("_EmissionColor", DayColor * 1.5f);
+            beacon.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
+
+            AssetDatabase.SaveAssets();
+            return mats;
+        }
+
+        static Material Storybook(string name, Shader shader, Color baseColor, Color shadowTint)
+        {
+            var m = GetOrCreateMaterial(name, shader);
+            m.SetColor("_BaseColor", baseColor);
+            m.SetColor("_ShadowTint", shadowTint);
+            m.SetColor("_EmissionColor", Color.black);
+            return m;
+        }
+
+        static void Ghost(string name, Shader shader, Color fill, Color edge)
+        {
+            var m = GetOrCreateMaterial(name, shader);
+            fill.a = 0.12f;
+            m.SetColor("_BaseColor", fill);
+            m.SetColor("_EdgeColor", edge);
+        }
+
+        static Material GetOrCreateMaterial(string name, Shader shader)
         {
             string path = $"{MaterialDir}/{name}.mat";
-            var shader = Shader.Find("Universal Render Pipeline/Lit");
-            var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
-            if (mat == null)
+            var m = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (m == null)
             {
-                mat = new Material(shader);
-                AssetDatabase.CreateAsset(mat, path);
+                m = new Material(shader);
+                AssetDatabase.CreateAsset(m, path);
             }
-            else mat.shader = shader;
-
-            mat.SetColor("_BaseColor", color);
-            mat.SetFloat("_Smoothness", 0.15f);
-            if (ghost) MakeTransparent(mat);
-            if (emission.HasValue)
+            else if (m.shader != shader)
             {
-                mat.EnableKeyword("_EMISSION");
-                mat.SetColor("_EmissionColor", emission.Value);
-                mat.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
+                // Clear leftovers from the previous shader (e.g. URP Lit transparency settings).
+                m.shader = shader;
+                m.shaderKeywords = new string[0];
+                m.SetOverrideTag("RenderType", "");
+                m.renderQueue = -1;
             }
-            EditorUtility.SetDirty(mat);
-            return mat;
+            EditorUtility.SetDirty(m);
+            return m;
         }
 
-        static void MakeTransparent(Material mat)
+        // ---------------------------------------------------------------- helpers
+
+        static GameObject GetOrCreateChild(GameObject parent, string name)
         {
-            mat.SetFloat("_Surface", 1);   // Transparent
-            mat.SetFloat("_Blend", 0);     // Alpha
-            mat.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
-            mat.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
-            mat.SetFloat("_SrcBlendAlpha", (float)BlendMode.One);
-            mat.SetFloat("_DstBlendAlpha", (float)BlendMode.OneMinusSrcAlpha);
-            mat.SetFloat("_ZWrite", 0);
-            mat.SetFloat("_CastShadows", 0);
-            mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
-            mat.SetOverrideTag("RenderType", "Transparent");
-            mat.SetShaderPassEnabled("ShadowCaster", false);
-            mat.SetShaderPassEnabled("DepthOnly", false);
-            mat.renderQueue = (int)RenderQueue.Transparent;
+            var t = parent.transform.Find(name);
+            if (t != null) return t.gameObject;
+            var go = new GameObject(name);
+            go.transform.SetParent(parent.transform, false);
+            return go;
         }
 
-        static void EnsureFolder(string path)
+        static T GetOrAdd<T>(GameObject go) where T : Component =>
+            go.TryGetComponent<T>(out var c) ? c : go.AddComponent<T>();
+
+        internal static void EnsureFolder(string path)
         {
             if (AssetDatabase.IsValidFolder(path)) return;
             int slash = path.LastIndexOf('/');
@@ -242,6 +294,5 @@ namespace SunSwitch.Art.EditorTools
         }
 
         static Color Hex(string hex) => ColorUtility.TryParseHtmlString("#" + hex, out var c) ? c : Color.magenta;
-        static Color WithAlpha(Color c, float a) { c.a = a; return c; }
     }
 }
