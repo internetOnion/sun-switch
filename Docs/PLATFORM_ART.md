@@ -10,12 +10,14 @@ Owner: platforms, platform prefabs, phase materials, character visual.
 | `Assets/Prefabs/Platforms/Base/` | Platform art | Base prefabs the variants inherit from — do not place these |
 | `Assets/Art/Materials/Phase/` | Platform art | `M_Phase_Day/Night/Both`, `M_Ghost_Day/Night` |
 | `Assets/Art/Shaders/` | Platform art | `SunSwitch/Storybook` and `SunSwitch/StorybookGhost` |
-| `Assets/Art/Meshes/` | Platform art | Real-size platform meshes (grey-box now, Blender exports later) |
+| `Assets/Prefabs/Obstacles/` | Look & feel | Obstacle prefabs level designers place (`KillBar_Day`, `JumpPad_Both`, `Shard_Night`, …); `Base/` is not for placing |
+| `Assets/Art/Materials/Obstacles/` | Look & feel | `M_Shard_Day/Night` |
+| `Assets/Art/Meshes/` | Platform art | Real-size platform meshes (`Ruins/`) and obstacle meshes (`Obstacles/`) |
 | `Assets/Art/Editor/` | Platform art | Platform tools (`Sun Switch > Art > …`) |
 | `Assets/Art/Characters/Lightkeeper/` | Character art | Lightkeeper model (KayKit), lantern, animator controller |
 | `Assets/Art/Materials/Character/` | Character art | `M_Lightkeeper`, `M_LanternGlow` |
 | `Assets/Art/Materials/Sky/` | Look & feel | `M_StorybookSky` |
-| `Assets/Art/Scripts/` | Character art, look & feel | `LanternGlow`, `DayNightLook`, `DayNightDebugToggle` (runtime) |
+| `Assets/Art/Scripts/` | Character art, look & feel | `LanternGlow`, `DayNightLook`, `DayNightDebugToggle`, `Spinner`, `KillZone`, `JumpPad`, `Shard` (runtime) |
 | `Assets/Prefabs/Characters/` | Character art | `Lightkeeper.prefab` |
 | `Assets/Scenes/Sandbox/Platforms_Sandbox.unity` | Platform art | Preview / test scene, not in Build Settings |
 | `ArtSource/` (repo root, outside `Assets/`) | Platform art | Blender `.blend` sources; only exported `.fbx` goes into `Assets/` |
@@ -89,6 +91,31 @@ GDD §2 "Switch presentation": on every phase switch the world cross-fades over 
 - Ambient uses a three-colour probe set by script (sky ambient can't be re-baked every frame), so scenes don't need baked lighting.
 - **Setup:** `Sun Switch > Art > Add Day-Night Look To Open Scene` adds the sky, the `DayNightLook` (linked to the scene's directional light) and, in sandbox scenes only, `DayNightDebugToggle` (press **T** in Play mode). Safe to run again. Run it on `Main.unity` once it exists. Section scenes load additively, so they don't need their own.
 - Fog stays on in both phases. URP strips fog shader variants from builds when no scene uses fog, so keep the setup in a scene that's in Build Settings.
+
+## Obstacles
+
+GDD §5 obstacle toolkit. Every obstacle comes in `_Day`, `_Night` and `_Both` variants (phase colour only), except shards, which are always Day-only or Night-only (GDD §4).
+
+| Prefab | Size | What it does | Hook |
+| --- | --- | --- | --- |
+| `KillBar_X` | post ⌀0.8 m; bar 5.5 m long at 0.75 m, 90°/s | Striped bar spinning on a post. Clear it by jumping. Fits on `Platform_Wide`. | `KillZone.PlayerKilled` |
+| `JumpPad_X` | 2 × 0.17 × 2 m | Carved stone with a rune disc; squashes when used | `JumpPad.PlayerLaunched` |
+| `KillSurface_S_X` / `KillSurface_M_X` | 2 × 2 m / 4 × 4 m, spikes to 0.44 m | Bed of red-brown ink-thorn spikes | `KillZone.PlayerKilled` |
+| `Shard_Day` / `Shard_Night` | ~0.8 m crystal, 0.6 m pickup radius | Floats, bobs and turns; hides when picked up | `Shard.Collected` |
+
+- **Placing:** obstacles sit *on* a platform. Their pivot is the bottom centre, so put them at the platform's top y. Shards pivot at their centre and float (about 1.2 m above the surface is a comfortable grab).
+- **Tuning per instance:** `Spinner` on `KillBar/Arm` (degrees per second, start angle, so neighbouring bars can be out of step); `JumpPad` on `JumpPad/Trigger` (*Launch Height* in metres, default 5).
+- **Hazard look:** the danger parts use darker red-brown vertex colours under the phase colour, so a kill bar or spike bed reads as dangerous in gold, indigo and grey.
+- **Source:** `ArtSource/obstacles.py` (Blender 5): `blender -b --factory-startup --python ArtSource/obstacles.py -- "<repo>/Assets/Art/Meshes/Obstacles"`. `RuinMeshPostprocessor` bakes the ink on import, the same as the ruins.
+- **Prefabs:** `Sun Switch > Art > Build Obstacle Prefabs` creates or updates them in place (same GUIDs, so placed instances keep working). `Sun Switch > Art > Add Obstacle Row To Sandbox` puts one of each in `Platforms_Sandbox` at z = 36.
+
+### Hand-offs
+
+The obstacles only *report* what happened, through static C# events. The owners of each system decide what it means. The player must be tagged **`Player`** (Unity's built-in tag). A plain `CharacterController` is enough; no Rigidbody is needed on the player.
+
+- **P2 (player):** subscribe to `KillZone.PlayerKilled` → death / respawn / lose a life. Subscribe to `JumpPad.PlayerLaunched` → set the vertical velocity to `pad.LaunchSpeed(Gravity)`. With the Starter Assets gravity of −15 and the default 5 m, that's 12.25 m/s.
+- **P3 (score):** subscribe to `Shard.Collected` → count it (`Shards 7/12`). On game over call `Shard.ResetAll()`, which brings every shard back and raises `Shard.ShardsReset`.
+- **P1 (phase):** the phased variants are ordinary phased objects: turn their colliders and renderers on and off like the platforms. A hidden kill zone can't kill, because its trigger collider is off.
 
 ## Needs agreement with the gameplay-logic owner
 
