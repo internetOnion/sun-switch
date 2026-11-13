@@ -98,9 +98,9 @@ Material:
     - _DetailNormalMapScale: 1
     - _DstBlend: 0
     - _DstBlendAlpha: 0
-    - _EdgeInkPixels: 1.8
-    - _EdgeInkStrength: 0.95
-    - _EdgeInkWidth: 0.035
+    - _EdgeInkPixels: 1
+    - _EdgeInkStrength: 0.85
+    - _EdgeInkWidth: 0.02
     - _EdgeInkWobble: 0.5
     - _EnvironmentReflections: 1
     - _GlossMapScale: 0
@@ -110,8 +110,8 @@ Material:
     - _Metallic: 0
     - _NoiseScale: 1.2
     - _OcclusionStrength: 1
-    - _OutlinePixels: 1.8
-    - _OutlineWidth: 0.03
+    - _OutlinePixels: 1.2
+    - _OutlineWidth: 0.02
     - _Parallax: 0.005
     - _QueueOffset: 0
     - _ReceiveShadows: 1
