@@ -22,6 +22,7 @@ namespace SunSwitch.Art.EditorTools
     public static class PlatformPrefabBuilder
     {
         const string MaterialDir = "Assets/Art/Materials/Phase";
+        const string RuinDir = "Assets/Art/Meshes/Ruins";
         const string BaseDir = "Assets/Prefabs/Platforms/Base";
         const string VariantDir = "Assets/Prefabs/Platforms";
         const string SandboxDir = "Assets/Scenes/Sandbox";
@@ -134,15 +135,18 @@ namespace SunSwitch.Art.EditorTools
         /// <summary>Creates or updates Visual (and Collision / Beacon) children in place.</summary>
         static void ApplyGeometry(GameObject root, Spec spec, Material baseMat, Material beaconMat)
         {
+            // Grey-box mesh: the fallback visual, and always the pillar's collision shape.
             var mesh = spec.Shape == Shape.Cylinder
                 ? GreyboxMeshes.Cylinder($"Mesh_{spec.Name}", spec.Size.x / 2f, spec.Size.y)
                 : GreyboxMeshes.Box($"Mesh_{spec.Name}", spec.Size);
+            // Ruin model from Blender (ArtSource/ruin_platforms.py), pivoted like the prefab.
+            var ruin = AssetDatabase.LoadAssetAtPath<Mesh>($"{RuinDir}/Ruin_{spec.Name}.fbx");
 
             var visual = GetOrCreateChild(root, "Visual");
-            visual.transform.localPosition = spec.Centre;
+            visual.transform.localPosition = ruin != null ? Vector3.zero : spec.Centre;
             visual.transform.localRotation = Quaternion.identity;
             visual.transform.localScale = Vector3.one;
-            GetOrAdd<MeshFilter>(visual).sharedMesh = mesh;
+            GetOrAdd<MeshFilter>(visual).sharedMesh = ruin != null ? ruin : mesh;
             var renderer = GetOrAdd<MeshRenderer>(visual);
             if (renderer.sharedMaterial == null) renderer.sharedMaterial = baseMat;
 

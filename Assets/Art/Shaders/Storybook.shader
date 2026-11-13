@@ -2,8 +2,10 @@
 // - Banded light with a wobbly, painted shadow edge and tinted shadows
 // - Paper grain + paint blotches from world-space noise (no UVs or textures needed,
 //   so a 2 m and an 8 m platform get the same grain size)
-// - Ink outline (inverted hull). Extrudes along smoothed normals stored in UV3,
-//   which the Sun Switch mesh tools bake; falls back to the vertex normal.
+// - Hand-drawn ink on sharp edges, from per-triangle edge distances baked by MeshInk
+//   (UV1, UV2.x); UV2.y flags: 0 = no data, 1 = baked, 2 = baked + outline hull
+// - Ink outline (inverted hull) for curved silhouettes, along smoothed normals in UV3
+// - Vertex colour tints parts of a model (paving, grout, rock) under the phase colour
 Shader "SunSwitch/Storybook"
 {
     Properties
@@ -123,8 +125,9 @@ Shader "SunSwitch/Storybook"
             {
                 float4 positionOS : POSITION;
                 float3 normalOS   : NORMAL;
-                float2 faceUV     : TEXCOORD0; // position on the face, metres
-                float2 faceSize   : TEXCOORD1; // face size, metres (0 = no ink on that axis)
+                float4 color      : COLOR;
+                float2 inkAB      : TEXCOORD1; // metres to the edges opposite corners 0 and 1
+                float2 inkC       : TEXCOORD2; // x: metres to the edge opposite corner 2, y: flags
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -134,7 +137,8 @@ Shader "SunSwitch/Storybook"
                 float3 positionWS : TEXCOORD0;
                 float3 normalWS   : TEXCOORD1;
                 float  fogFactor  : TEXCOORD2;
-                float4 face       : TEXCOORD3; // xy = faceUV, zw = faceSize
+                float4 ink        : TEXCOORD3; // xyz = edge distances, w = flags
+                half3  tint       : TEXCOORD4;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
                 UNITY_VERTEX_OUTPUT_STEREO
             };
@@ -150,20 +154,21 @@ Shader "SunSwitch/Storybook"
                 o.positionWS = pos.positionWS;
                 o.normalWS = TransformObjectToWorldNormal(input.normalOS);
                 o.fogFactor = ComputeFogFactor(pos.positionCS.z);
-                o.face = float4(input.faceUV, input.faceSize);
+                o.ink = float4(input.inkAB, input.inkC);
+                // Meshes without baked data get no edge ink and a white tint.
+                o.tint = input.inkC.y > 0.5 ? input.color.rgb : half3(1, 1, 1);
                 return o;
             }
 
-            // 0..1 ink coverage near the edges of the current face, with a hand-drawn wobble.
-            half EdgeInk(float4 face, float3 positionWS)
+            // 0..1 ink coverage near the inked edges of the current triangle, with a hand-drawn wobble.
+            half EdgeInk(float4 ink, float3 positionWS)
             {
-                float d = 1e5;
-                if (face.z > 0.0) d = min(d, min(face.x, face.z - face.x));
-                if (face.w > 0.0) d = min(d, min(face.y, face.w - face.y));
+                float d = min(ink.x, min(ink.y, ink.z));
                 float metresPerPixel = max(fwidth(d), 1e-4);
                 float width = max(_EdgeInkWidth, _EdgeInkPixels * metresPerPixel);
                 float wobble = (ValueNoise(positionWS * 7.0) - 0.5) * _EdgeInkWobble * width;
-                return (1.0 - smoothstep(width - metresPerPixel, width + metresPerPixel, d + wobble)) * _EdgeInkStrength;
+                half coverage = 1.0 - smoothstep(width - metresPerPixel, width + metresPerPixel, d + wobble);
+                return coverage * _EdgeInkStrength * step(0.5, ink.w);   // no baked data = no ink
             }
 
             half4 Frag(Varyings i) : SV_Target
@@ -177,7 +182,7 @@ Shader "SunSwitch/Storybook"
                 // Two grain sizes, offset from each other, so the grain doesn't show a grid of cells.
                 float3 grainP = i.positionWS * _NoiseScale * 14.0;
                 float grain = (ValueNoise(grainP) + ValueNoise(grainP * 2.17 + 17.3)) * 0.5;
-                half3 albedo = _BaseColor.rgb;
+                half3 albedo = _BaseColor.rgb * i.tint;
                 albedo *= 1.0 + (blotch - 0.5) * 2.0 * _BlotchStrength;
                 albedo *= 1.0 + (grain - 0.5) * 2.0 * _GrainStrength;
 
@@ -216,7 +221,7 @@ Shader "SunSwitch/Storybook"
                 half rim = pow(1.0 - saturate(dot(n, v)), 4.0) * saturate(ndl + 0.3) * _RimStrength;
                 color += _RimColor.rgb * rim * mainLight.color;
                 color += _EmissionColor.rgb;
-                color = lerp(color, _OutlineColor.rgb, EdgeInk(i.face, i.positionWS));
+                color = lerp(color, _OutlineColor.rgb, EdgeInk(i.ink, i.positionWS));
 
                 color = MixFog(color, i.fogFactor);
                 return half4(color, 1.0);
@@ -241,7 +246,7 @@ Shader "SunSwitch/Storybook"
             {
                 float4 positionOS   : POSITION;
                 float3 normalOS     : NORMAL;
-                float2 faceSize     : TEXCOORD1;
+                float2 inkC         : TEXCOORD2; // y: 0 = no data, 1 = no hull, 2 = hull
                 float4 smoothNormal : TEXCOORD3;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
@@ -259,9 +264,10 @@ Shader "SunSwitch/Storybook"
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 
-                // Faces with ink data on both axes already ink every edge (silhouette included),
-                // so skip the hull there to avoid a doubled border. Moved outside the clip volume.
-                if (input.faceSize.x > 0.0 && input.faceSize.y > 0.0)
+                // Flat regions already ink their edges (silhouette included), so the hull is only
+                // drawn where MeshInk flagged a curved surface, or on meshes without baked data.
+                // Skipped triangles are moved outside the clip volume.
+                if (input.inkC.y > 0.5 && input.inkC.y < 1.5)
                 {
                     o.positionCS = float4(2.0, 2.0, 2.0, 1.0);
                     return o;

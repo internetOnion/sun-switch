@@ -54,8 +54,18 @@ Platform_Medium_Day      root — BoxCollider, phase component goes here, never 
 All phase materials use `SunSwitch/Storybook` (`Assets/Art/Shaders/`): two-band painted lighting with tinted shadows, world-space paper grain and paint blotches, a cream rim highlight, and an ink outline. Ghost materials use `SunSwitch/StorybookGhost`: a faint transparent fill with bright edges and diagonal hatch lines, no shadows.
 
 - Day/night lighting changes come from the scene's directional light colour and intensity; the shader follows them, no material swaps needed.
-- The ink outline extrudes along smoothed normals stored in the mesh's UV3. Grey-box meshes in `Assets/Art/Meshes/Greybox/` have them baked; imported Blender meshes need the same (the import step will handle it).
+- Edge ink and outlines need data baked into the mesh by `MeshInk` (edge distances in UV1/UV2, smoothed normals in UV3). Grey-box meshes and the ruin models get it automatically. Any other mesh using this shader renders without edge ink and with an outline hull.
 - `Sun Switch > Art > Apply Storybook Look` refreshes materials and meshes inside the existing prefabs and is safe to run at any time. `Build Grey-box Platforms` replaces the prefabs and should no longer be used once platforms are placed in scenes.
+
+## Ruin models
+
+The final platform visuals are floating sky-ruins: flat paved tops (exactly at the collider top), chipped corners inside the footprint, stepped masonry sides, and a jagged rock hanging underneath. Pillar is a broken column; Wall is a crumbling brick wall.
+
+- Source: `ArtSource/ruin_platforms.py`, a Blender 5 script. Every shape comes from a fixed seed, so re-running it gives identical models. Run it in Blender's Scripting tab (or through the Blender MCP), call `build_all()`, then `export_all("<repo>/Assets/Art/Meshes/Ruins")`.
+- Unity import: `RuinMeshPostprocessor` sets the import settings and bakes the ink data (`MeshInk`) automatically. Nothing to configure by hand.
+- Prefabs: `Apply Storybook Look` puts the ruin model in each `Visual` slot when one exists, otherwise the grey-box mesh. Colliders are unchanged.
+- Nothing visual sticks out past the collider footprint. The hanging rock is decoration only and has no collider.
+- Vertex colours shade the parts (paving, grout, sides, rock); the phase colour multiplies on top.
 
 ## Needs agreement with the gameplay-logic owner
 
