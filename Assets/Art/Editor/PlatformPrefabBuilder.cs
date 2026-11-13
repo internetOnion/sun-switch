@@ -238,6 +238,13 @@ namespace SunSwitch.Art.EditorTools
             m.SetColor("_BaseColor", baseColor);
             m.SetColor("_ShadowTint", shadowTint);
             m.SetColor("_EmissionColor", Color.black);
+            // Ink tuning lives here so every platform material stays consistent.
+            m.SetFloat("_OutlineWidth", 0.03f);
+            m.SetFloat("_OutlinePixels", 1.8f);
+            m.SetFloat("_EdgeInkWidth", 0.035f);
+            m.SetFloat("_EdgeInkPixels", 1.8f);
+            m.SetFloat("_EdgeInkStrength", 0.95f);
+            m.SetFloat("_EdgeInkWobble", 0.5f);
             return m;
         }
 
