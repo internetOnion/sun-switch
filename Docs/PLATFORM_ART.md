@@ -9,7 +9,9 @@ Owner: platforms, platform prefabs, phase materials, character visual.
 | `Assets/Prefabs/Platforms/` | Platform art | Prefabs level designers place (`Platform_Medium_Day`, …) |
 | `Assets/Prefabs/Platforms/Base/` | Platform art | Base prefabs the variants inherit from — do not place these |
 | `Assets/Art/Materials/Phase/` | Platform art | `M_Phase_Day/Night/Both`, `M_Ghost_Day/Night` |
-| `Assets/Art/Editor/` | Platform art | Grey-box generator (`Sun Switch > Art > Build Grey-box Platforms`) |
+| `Assets/Art/Shaders/` | Platform art | `SunSwitch/Storybook` and `SunSwitch/StorybookGhost` |
+| `Assets/Art/Meshes/` | Platform art | Real-size platform meshes (grey-box now, Blender exports later) |
+| `Assets/Art/Editor/` | Platform art | Platform tools (`Sun Switch > Art > …`) |
 | `Assets/Scenes/Sandbox/Platforms_Sandbox.unity` | Platform art | Preview / test scene, not in Build Settings |
 | `ArtSource/` (repo root, outside `Assets/`) | Platform art | Blender `.blend` sources; only exported `.fbx` goes into `Assets/` |
 
@@ -46,6 +48,14 @@ Platform_Medium_Day      root — BoxCollider, phase component goes here, never 
 | Night | `M_Phase_Night` | `#6670B8` night indigo |
 | Both | `M_Phase_Both` | `#9A958C` warm grey stone |
 | Ghost (inactive phase) | `M_Ghost_Day` / `M_Ghost_Night` | same hue, 30 % opacity, no shadows |
+
+## Storybook look
+
+All phase materials use `SunSwitch/Storybook` (`Assets/Art/Shaders/`): two-band painted lighting with tinted shadows, world-space paper grain and paint blotches, a cream rim highlight, and an ink outline. Ghost materials use `SunSwitch/StorybookGhost`: a faint transparent fill with bright edges and diagonal hatch lines, no shadows.
+
+- Day/night lighting changes come from the scene's directional light colour and intensity; the shader follows them, no material swaps needed.
+- The ink outline extrudes along smoothed normals stored in the mesh's UV3. Grey-box meshes in `Assets/Art/Meshes/Greybox/` have them baked; imported Blender meshes need the same (the import step will handle it).
+- `Sun Switch > Art > Apply Storybook Look` refreshes materials and meshes inside the existing prefabs and is safe to run at any time. `Build Grey-box Platforms` replaces the prefabs and should no longer be used once platforms are placed in scenes.
 
 ## Needs agreement with the gameplay-logic owner
 
