@@ -26,11 +26,11 @@ Shader "SunSwitch/Storybook"
         [HDR] _EmissionColor ("Emission", Color) = (0, 0, 0, 1)
 
         _OutlineColor ("Ink Colour", Color) = (0.157, 0.137, 0.129, 1)
-        _OutlineWidth ("Ink Width (metres)", Range(0, 0.1)) = 0.03
-        _OutlinePixels ("Ink Min Width (pixels)", Range(0, 6)) = 1.8
-        _EdgeInkWidth ("Edge Ink Width (metres)", Range(0, 0.1)) = 0.035
-        _EdgeInkPixels ("Edge Ink Min Width (pixels)", Range(0, 4)) = 1.8
-        _EdgeInkStrength ("Edge Ink Strength", Range(0, 1)) = 0.95
+        _OutlineWidth ("Ink Width (metres)", Range(0, 0.1)) = 0.02
+        _OutlinePixels ("Ink Min Width (pixels)", Range(0, 6)) = 1.2
+        _EdgeInkWidth ("Edge Ink Width (metres)", Range(0, 0.1)) = 0.02
+        _EdgeInkPixels ("Edge Ink Min Width (pixels)", Range(0, 4)) = 1.0
+        _EdgeInkStrength ("Edge Ink Strength", Range(0, 1)) = 0.85
         _EdgeInkWobble ("Edge Ink Wobble", Range(0, 1)) = 0.5
     }
 
