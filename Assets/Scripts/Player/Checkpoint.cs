@@ -39,7 +39,7 @@ namespace SunSwitch.Player
 
         void OnTriggerEnter(Collider other)
         {
-            if (!other.CompareTag("Player")) return;
+            if (!other.TryGetComponent<PlayerDeath>(out _)) return;
 
             if (WorldPhase.Instance != null) SavedPhase = WorldPhase.Instance.Current;
 

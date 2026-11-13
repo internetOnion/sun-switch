@@ -1,4 +1,5 @@
 using System.Collections;
+using SunSwitch.Player;
 using UnityEngine;
 
 namespace SunSwitch.Core
@@ -42,14 +43,14 @@ namespace SunSwitch.Core
 
         void OnTriggerEnter(Collider other)
         {
-            if (!other.CompareTag("Player")) return;
+            if (!other.TryGetComponent<PlayerDeath>(out _)) return;
             _player = other.transform;
             StartCycle();
         }
 
         void OnTriggerExit(Collider other)
         {
-            if (other.CompareTag("Player")) StopCycle();
+            if (other.TryGetComponent<PlayerDeath>(out _)) StopCycle();
         }
 
         void HandleDied(DeathCause _) => StopCycle();

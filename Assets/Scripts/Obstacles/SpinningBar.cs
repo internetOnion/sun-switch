@@ -12,6 +12,8 @@ namespace SunSwitch.Obstacles
         [SerializeField] float degreesPerSecond = 90f;
         [SerializeField, Tooltip("Local axis to spin around")]
         Vector3 axis = Vector3.up;
+        [SerializeField, Tooltip("Starting angle, so neighbouring bars can be out of step")]
+        float startAngle;
 
         Rigidbody _rb;
 
@@ -20,6 +22,8 @@ namespace SunSwitch.Obstacles
             _rb = GetComponent<Rigidbody>();
             _rb.isKinematic = true;   // moved by script, not physics
             _rb.interpolation = RigidbodyInterpolation.Interpolate;
+            transform.rotation *= Quaternion.AngleAxis(startAngle, axis.normalized);
+            _rb.rotation = transform.rotation;   // physics pose isn't synced yet; FixedUpdate reads it
         }
 
         void FixedUpdate()
