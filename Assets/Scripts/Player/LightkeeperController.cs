@@ -75,6 +75,7 @@ namespace SunSwitch.Player
         private float _verticalVelocity;
         private readonly float _terminalVelocity = 53.0f;
         private Vector3 _externalVelocity;
+        private Vector3 _ownVelocity;   // from this script's own Move only (not PlatformRider's carry)
 
         // timers
         private float _jumpTimeoutDelta;
@@ -167,6 +168,7 @@ namespace SunSwitch.Player
             _verticalVelocity = 0f;
             _speed = 0f;
             _externalVelocity = Vector3.zero;
+            _ownVelocity = Vector3.zero;
             _jumpBufferTimer = 0f;
             _coyoteTimer = 0f;
         }
@@ -222,9 +224,11 @@ namespace SunSwitch.Player
             Vector2 move = InputLock.IsLocked ? Vector2.zero : _input.move;
             float targetSpeed = move == Vector2.zero ? 0.0f : MoveSpeed;
 
-            // Leave out jump-pad push so it isn't turned into extra run speed.
-            float currentHorizontalSpeed = new Vector3(_controller.velocity.x - _externalVelocity.x, 0.0f,
-                _controller.velocity.z - _externalVelocity.z).magnitude;
+            // Leave out jump-pad push so it isn't turned into extra run speed. Uses the velocity of
+            // this script's own last Move: CharacterController.velocity only reports the most recent
+            // Move call, which on a moving platform is PlatformRider's carry, not the player's run.
+            float currentHorizontalSpeed = new Vector3(_ownVelocity.x - _externalVelocity.x, 0.0f,
+                _ownVelocity.z - _externalVelocity.z).magnitude;
             float speedOffset = 0.1f;
             float inputMagnitude = _input.analogMovement ? move.magnitude : 1f;
 
@@ -255,9 +259,11 @@ namespace SunSwitch.Player
 
             _externalVelocity = Vector3.MoveTowards(_externalVelocity, Vector3.zero, ExternalDrag * Time.deltaTime);
 
+            Vector3 before = transform.position;
             _controller.Move(targetDirection.normalized * (_speed * Time.deltaTime) +
                              new Vector3(0.0f, _verticalVelocity, 0.0f) * Time.deltaTime +
                              _externalVelocity * Time.deltaTime);
+            if (Time.deltaTime > 0f) _ownVelocity = (transform.position - before) / Time.deltaTime;
 
             if (_hasAnimator)
             {

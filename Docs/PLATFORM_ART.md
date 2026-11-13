@@ -131,6 +131,18 @@ GDD §5 obstacle toolkit. Every obstacle comes in `_Day`, `_Night` and `_Both` v
 - A shard finds the player by its `PlayerDeath` component, like the gameplay scripts. The `Player` tag is still accepted.
 - The pickup trigger belongs to the `PhaseObject`; `Shard` only hides and shows the crystal. That's why `ResetAll()` can't make a ghost shard collectable.
 
+## Playable sandbox
+
+`Sun Switch > Art > Make Sandbox Playable` turns `Platforms_Sandbox` into a small test level, so the art can be played with the real controller before `Main.unity` exists. Safe to run again: it rebuilds the course and reuses the rest.
+
+- **Player:** the scene's Lightkeeper gets `CharacterController`, `PlayerInput` (Starter Assets actions, *Send Messages*), `StarterAssetsInputs`, `LightkeeperController`, `PlayerDeath`, `PhaseSwitchInput`, `PhaseOverlapChecker` and `PlatformRider`, plus a `PlayerCameraRoot` child at 1.375 m. It's tagged `Player` and sits on the *Ignore Raycast* layer, so the ground check doesn't hit its own capsule.
+- **Camera:** the Main Camera gets a `CinemachineBrain`; the Starter Assets `PlayerFollowCamera` follows `PlayerCameraRoot`.
+- **Managers:** `Sandbox Managers` with a `RespawnManager` (respawns on every death; there's no `GameManager` here). `WorldPhase` sits on the `DayNightLook` object.
+- **Controls:** WASD / mouse to move and look, Space to jump, **Right Mouse** to switch, **T** to force a switch (ignores cooldown and overlap).
+- **Test Course** (along +x at z = −16): start checkpoint → Both hop → Day and Night stepping stones (switch mid-run) → kill bar → jump pad up to a Night-only ledge 5 m higher (switch in the air) with a Night shard → checkpoint → moving platform → Day landing → Night spikes with a Day shard above them → Night wall to pass in Day. A `KillPlane` under it catches falls.
+
+This is a test rig, not the game's player: the player prefab, follow camera and managers for `Main.unity` belong to P2 and P1. The component list above is the same one their scene checklist asks for, so it can be copied.
+
 ## Character: the Lightkeeper
 
 A small hooded figure in a parchment-cream hood and cape with a muted-red tunic, carrying a lantern on their back. The camera mostly sees the back, so the lantern is the part that shows the phase: it glows sun gold in Day and moon blue in Night. Cream and red stay readable on gold, indigo and grey platforms.
