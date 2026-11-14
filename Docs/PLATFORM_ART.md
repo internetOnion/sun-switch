@@ -22,6 +22,7 @@ Owner: platforms, platform prefabs, phase materials, character visual.
 | `Assets/Art/Scripts/` | Character art, look & feel | `LanternGlow`, `DayNightLook`, `DayNightDebugToggle`, `Shard` (runtime). Obstacle and phase behaviour lives in `Assets/Scripts` (gameplay). |
 | `Assets/Prefabs/Characters/` | Character art | `Lightkeeper.prefab` |
 | `Assets/Scenes/Sandbox/Platforms_Sandbox.unity` | Platform art | Preview / test scene, not in Build Settings |
+| `Assets/Scenes/Sandbox/Level_Greybox.unity` | Look & feel | The whole level plan grey-boxed and playable, not in Build Settings |
 | `ArtSource/` (repo root, outside `Assets/`) | Platform art | Blender `.blend` sources; only exported `.fbx` goes into `Assets/` |
 
 Only the owner edits these files. Ask for a change instead of editing them directly — this is what keeps prefab merges conflict-free.
@@ -147,6 +148,16 @@ GDD §5 obstacle toolkit. Every obstacle comes in `_Day`, `_Night` and `_Both` v
 - **Test Course** (along +x at z = −16): start checkpoint → Both hop → Day and Night stepping stones (switch mid-run) → kill bar → jump pad up to a Night-only ledge 5 m higher (switch in the air) with a Night shard → checkpoint → moving platform → Day landing → Night spikes with a Day shard above them → Night wall to pass in Day → one more hop to the `SummitGoal`. A `KillPlane` under it catches falls.
 
 This is a test rig, not the game's player: the player prefab, follow camera and managers for `Main.unity` belong to P2 and P1. The component list above is the same one their scene checklist asks for, so it can be copied. For `Main.unity`, drop in `MenuRoot` (add `GameMenuFlow`), `HUD.prefab`, an `EventSystem` and a `SummitGoal`, and set `ShardTracker` back to 12.
+
+## Level grey-box
+
+`Sun Switch > Art > Build Level Grey-box` places the Sun Switch Level Plan into `Assets/Scenes/Sandbox/Level_Greybox.unity`: the four sections around the tower, 12 shards, 6 checkpoints, a kill plane per section, the Summit `AutoCycleZone` and the `SummitGoal`. It adds the same player, camera, managers, menu and HUD as the playable sandbox, with the player on CP1. Safe to run again: the section roots are rebuilt and the rest is reused.
+
+- **One root per section** (`Section 1 - Mossy Base` … `Section 4 - Summit`), so each owner can copy theirs into `SectionN.unity` once those scenes exist. World positions are already final, so pasting keeps them.
+- **The positions live in `LevelGreyboxBuilder.cs`**, one line per prefab with a comment on what it's for. Change a beat there, rebuild, and keep the plan in step.
+- **Handoffs:** the corner checkpoints (CP2, CP3, CP4) are where sections meet. Move beats inside a section freely, but keep those fixed.
+- **Checked:** a route bot played the whole grey-box in a player build with the real controls: every hop, all 12 shards, each checkpoint's respawn and facing, the kill planes and the win. 90/90 checks, four runs in a row.
+- **Kill bars:** each arm reaches about 3 m from the post. On a 6 × 6 m platform, only the corners are outside that reach, so aim landings at a corner. Crossing behind an arm, moving the same way it does, is the easy line.
 
 ## HUD
 
