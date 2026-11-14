@@ -39,7 +39,7 @@ namespace SunSwitch.UI
                 case GameState.GameOver:
                 case GameState.Won:
                     var s = GameManager.Instance.Stats;
-                    _view.ShowResults(state == GameState.Won, new MenuResults(s.time, s.deaths, s.shards));
+                    _view.ShowResults(state == GameState.Won, new MenuResults(s.time, s.deaths, s.shards, s.totalShards));
                     break;
             }
         }

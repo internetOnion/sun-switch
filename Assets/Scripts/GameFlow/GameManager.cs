@@ -40,6 +40,9 @@ namespace SunSwitch.GameFlow
         /// <summary>The menu UI sets this false when it handles Esc on the Pause screen itself.</summary>
         public bool EscapeResumes { get; set; } = true;
 
+        /// <summary>True between the run ending (last life or summit) and the end screen.</summary>
+        public bool IsEnding => _ending;
+
         int _stateFrame = -1;
         bool _ending;
 
@@ -126,6 +129,9 @@ namespace SunSwitch.GameFlow
             _ending = false;
             Time.timeScale = 1f;
             if (timer) timer.Stop();
+            // Back to the start behind the menu, so the menu's Day/Night flips can't drop the
+            // player off a phase platform mid-tower.
+            if (RespawnManager.Instance) RespawnManager.Instance.ResetToStart();
             SetState(GameState.Menu);
         }
 

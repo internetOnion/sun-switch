@@ -28,8 +28,9 @@ namespace SunSwitch.GameFlow
         /// <summary>mm:ss.ff</summary>
         public static string Format(float seconds)
         {
-            seconds = Mathf.Max(0f, seconds);
-            return $"{(int)(seconds / 60f):00}:{seconds % 60f:00.00}";
+            // Whole hundredths first, so 59.996 s shows 00:59.99, never 00:60.00.
+            int hundredths = Mathf.FloorToInt(Mathf.Max(0f, seconds) * 100f);
+            return $"{hundredths / 6000:00}:{hundredths / 100 % 60:00}.{hundredths % 100:00}";
         }
     }
 }
