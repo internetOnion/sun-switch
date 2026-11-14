@@ -10,8 +10,10 @@ Owner: platforms, platform prefabs, phase materials, character visual.
 | `Assets/Prefabs/Platforms/Base/` | Platform art | Base prefabs the variants inherit from — do not place these |
 | `Assets/Art/Materials/Phase/` | Platform art | `M_Phase_Day/Night/Both`, `M_Ghost_Day/Night`, `M_Checkpoint_Beacon/Lit` |
 | `Assets/Art/Shaders/` | Platform art | `SunSwitch/Storybook` and `SunSwitch/StorybookGhost` |
-| `Assets/Prefabs/Obstacles/` | Look & feel | Obstacle prefabs level designers place (`KillBar_Day`, `JumpPad_Both`, `Shard_Night`, `KillPlane`, …); `Base/` is not for placing |
+| `Assets/Prefabs/Obstacles/` | Look & feel | Obstacle prefabs level designers place (`KillBar_Day`, `JumpPad_Both`, `Shard_Night`, `KillPlane`, `SummitGoal`, …); `Base/` is not for placing |
 | `Assets/Art/Materials/Obstacles/` | Look & feel | `M_Shard_Day/Night` |
+| `Assets/Prefabs/UI/` | Look & feel | `HUD.prefab` (in-game HUD) |
+| `Assets/Art/UI/` | Look & feel | HUD icon sprites (`HUD_Flame`, `HUD_Sun`, `HUD_Moon`, `HUD_Ring`, `HUD_Shard`) |
 | `Assets/Art/Meshes/` | Platform art | Real-size platform meshes (`Ruins/`) and obstacle meshes (`Obstacles/`) |
 | `Assets/Art/Editor/` | Platform art | Platform tools (`Sun Switch > Art > …`) |
 | `Assets/Art/Characters/Lightkeeper/` | Character art | Lightkeeper model (KayKit), lantern, animator controller |
@@ -115,6 +117,7 @@ GDD §5 obstacle toolkit. Every obstacle comes in `_Day`, `_Night` and `_Both` v
 | `KillSurface_S_X` / `KillSurface_M_X` | 2 × 2 m / 4 × 4 m, spikes to 0.44 m | Bed of red-brown ink-thorn spikes | `KillSurface` on `Kill` |
 | `Shard_Day` / `Shard_Night` | ~0.8 m crystal, 0.6 m pickup radius | Floats, bobs and turns; hides when picked up | `Shard` (art) |
 | `KillPlane` | invisible 40 × 40 m trigger, top at the pivot | Catches falls under a section before the void line far below | `KillSurface` |
+| `SummitGoal` | 1.8 m stone pillar with a glowing crown; 3 × 2.5 × 3 m trigger | The finish. Touching it switches on the ending beat (a 12 m column of light) and wins the run | `SummitGoal` on `Trigger` |
 
 - **Phases:** every root has a `PhaseObject` (tag and ghost material set by the variant). In the other phase the obstacle shows as a ghost and its colliders, triggers included, are off, so a ghost hazard can't kill, a ghost pad can't launch and a ghost shard can't be picked up. Switching a hazard on around the player kills them (`KillSurface` checks overlaps too).
 - **Placing:** obstacles sit *on* a platform. Their pivot is the bottom centre, so put them at the platform's top y. Shards pivot at their centre and float (about 1.2 m above the surface is a comfortable grab). Put a `KillPlane` a few metres under each section; scale its x / z to fit.
@@ -137,11 +140,23 @@ GDD §5 obstacle toolkit. Every obstacle comes in `_Day`, `_Night` and `_Both` v
 
 - **Player:** the scene's Lightkeeper gets `CharacterController`, `PlayerInput` (Starter Assets actions, *Send Messages*), `StarterAssetsInputs`, `LightkeeperController`, `PlayerDeath`, `PhaseSwitchInput`, `PhaseOverlapChecker` and `PlatformRider`, plus a `PlayerCameraRoot` child at 1.375 m. It's tagged `Player` and sits on the *Ignore Raycast* layer, so the ground check doesn't hit its own capsule.
 - **Camera:** the Main Camera gets a `CinemachineBrain`; the Starter Assets `PlayerFollowCamera` follows `PlayerCameraRoot`.
-- **Managers:** `Sandbox Managers` with a `RespawnManager` (respawns on every death; there's no `GameManager` here). `WorldPhase` sits on the `DayNightLook` object.
-- **Controls:** WASD / mouse to move and look, Space to jump, **Right Mouse** to switch, **T** to force a switch (ignores cooldown and overlap).
-- **Test Course** (along +x at z = −16): start checkpoint → Both hop → Day and Night stepping stones (switch mid-run) → kill bar → jump pad up to a Night-only ledge 5 m higher (switch in the air) with a Night shard → checkpoint → moving platform → Day landing → Night spikes with a Day shard above them → Night wall to pass in Day. A `KillPlane` under it catches falls.
+- **Managers:** `Sandbox Managers` has `RespawnManager` (with *Respawn On Death* off), `GameManager`, `LivesSystem`, `RunTimer` and `ShardTracker`. `ShardTracker`'s total is the number of shards in the sandbox, not the tower's 12. `WorldPhase` sits on the `DayNightLook` object.
+- **Game flow:** Play opens on the storybook Start screen (`MenuRoot` with `GameMenuFlow`). Then: 3 lives, a run timer, shards, Esc to pause, Game Over after the third death, and the Victory screen at the summit. An `EventSystem` (Input System UI module) drives the menu buttons. Untick *Start In Menu* on `GameManager` to skip the Start screen while testing art.
+- **HUD:** `HUD.prefab` (see below).
+- **Controls:** WASD / mouse to move and look, Space to jump, **Right Mouse** to switch, **Esc** to pause, **T** to force a switch (ignores cooldown and overlap).
+- **Test Course** (along +x at z = −16): start checkpoint → Both hop → Day and Night stepping stones (switch mid-run) → kill bar → jump pad up to a Night-only ledge 5 m higher (switch in the air) with a Night shard → checkpoint → moving platform → Day landing → Night spikes with a Day shard above them → Night wall to pass in Day → one more hop to the `SummitGoal`. A `KillPlane` under it catches falls.
 
-This is a test rig, not the game's player: the player prefab, follow camera and managers for `Main.unity` belong to P2 and P1. The component list above is the same one their scene checklist asks for, so it can be copied.
+This is a test rig, not the game's player: the player prefab, follow camera and managers for `Main.unity` belong to P2 and P1. The component list above is the same one their scene checklist asks for, so it can be copied. For `Main.unity`, drop in `MenuRoot` (add `GameMenuFlow`), `HUD.prefab`, an `EventSystem` and a `SummitGoal`, and set `ShardTracker` back to 12.
+
+## HUD
+
+`Assets/Prefabs/UI/HUD.prefab`, built by `Sun Switch > Art > Build HUD Prefab` (safe to run again; sprites and prefab are rebuilt in place). It's in the menu's storybook style (`Docs/UI_ART_STYLE.md`): ink on parchment plates, sun gold and moon blue accents. The menu art direction leaves the gameplay HUD out of its scope, so it lives here.
+
+- **Lives** (top left): three lantern flames. A lost one greys out and bounces.
+- **Run** (top centre): `PhaseCooldownIcon` (sun or moon inside a gold ring that refills over the switch cooldown, shakes red when a switch is blocked) and the run timer. The line under the timer is a `PhaseThemedGraphic`: gold by Day, blue by Night.
+- **Shards** (top right): crystal and `x/total`.
+- `HUDController` on the root (with a `CanvasGroup`) shows it while playing or paused. The canvas is an overlay with sort order −10, so the menu draws over it.
+- Icons are baked sprites in `Assets/Art/UI` (ink outline and white fill), tinted by the Image colour. The text uses Unity's built-in font, like the menu, until the licensed display font arrives.
 
 ## Character: the Lightkeeper
 

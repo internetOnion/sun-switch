@@ -20,7 +20,8 @@ namespace SunSwitch.GameFlow
         void HandleDied(DeathCause _)
         {
             var game = GameManager.Instance;
-            if (game != null && game.State != GameState.Playing) return;
+            // No life lost outside play, or after the run has ended (falling after the summit).
+            if (game != null && (game.State != GameState.Playing || game.IsEnding)) return;
 
             Lives = Mathf.Max(0, Lives - 1);
             GameEvents.RaiseLivesChanged(Lives);

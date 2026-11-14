@@ -14,9 +14,12 @@ namespace SunSwitch.UI
     public readonly struct MenuResults
     {
         public readonly float Seconds;
-        public readonly int Deaths, Shards;
-        public MenuResults(float seconds, int deaths, int shards)
-        { Seconds = Mathf.Max(0, seconds); Deaths = Mathf.Max(0, deaths); Shards = Mathf.Clamp(shards, 0, 12); }
+        public readonly int Deaths, Shards, TotalShards;
+        public MenuResults(float seconds, int deaths, int shards, int totalShards = 12)
+        {
+            Seconds = Mathf.Max(0, seconds); Deaths = Mathf.Max(0, deaths);
+            TotalShards = Mathf.Max(1, totalShards); Shards = Mathf.Clamp(shards, 0, TotalShards);
+        }
     }
 
     public sealed class StartMenuView : MonoBehaviour
@@ -104,7 +107,7 @@ namespace SunSwitch.UI
         public void ShowResults(bool victory, MenuResults results)
         {
             var elapsed = TimeSpan.FromSeconds(results.Seconds);
-            (victory ? victoryStats : gameOverStats).text = $"TIME     {(int)elapsed.TotalMinutes:00}:{elapsed.Seconds:00}\nDEATHS     {results.Deaths}\nSHARDS     {results.Shards} / 12";
+            (victory ? victoryStats : gameOverStats).text = $"TIME     {(int)elapsed.TotalMinutes:00}:{elapsed.Seconds:00}\nDEATHS     {results.Deaths}\nSHARDS     {results.Shards} / {results.TotalShards}";
             Replace(victory ? MenuScreen.Victory : MenuScreen.GameOver);
         }
         public void Execute(MenuCommandId command)
