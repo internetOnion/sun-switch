@@ -51,14 +51,23 @@ namespace SunSwitch.Art.EditorTools
             }
 
             BuildCourse(scene);
-            var player = SetUpPlayer(scene);
-            if (player == null) return;
-            SetUpCamera(scene, player);
-            var managers = SetUpManagers(scene);
-            SetUpGameFlow(scene, managers);
+            if (!SetUpPlayableRig(scene, StartPosition, Quaternion.Euler(0, 90, 0))) return;
 
             EditorSceneManager.MarkSceneDirty(scene);
             Debug.Log("[Sun Switch] Sandbox is playable: Play on the Start screen, then WASD / mouse to move, Space to jump, Right Mouse to switch, Esc to pause, T to force a switch.");
+        }
+
+        /// The player, follow camera, managers, menu and HUD for a scene, with the player at
+        /// start facing along rotation. Also used by the level grey-box. Returns false if the
+        /// Starter Assets input actions are missing.
+        internal static bool SetUpPlayableRig(UnityEngine.SceneManagement.Scene scene, Vector3 start, Quaternion rotation)
+        {
+            var player = SetUpPlayer(scene, start, rotation);
+            if (player == null) return false;
+            SetUpCamera(scene, player);
+            var managers = SetUpManagers(scene);
+            SetUpGameFlow(scene, managers);
+            return true;
         }
 
         // ---------------------------------------------------------------- course
@@ -121,7 +130,7 @@ namespace SunSwitch.Art.EditorTools
 
         // ---------------------------------------------------------------- player
 
-        static GameObject SetUpPlayer(UnityEngine.SceneManagement.Scene scene)
+        static GameObject SetUpPlayer(UnityEngine.SceneManagement.Scene scene, Vector3 start, Quaternion rotation)
         {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(LightkeeperPath);
             GameObject player = null;
@@ -132,7 +141,7 @@ namespace SunSwitch.Art.EditorTools
                 player = (GameObject)PrefabUtility.InstantiatePrefab(prefab, scene);
                 Undo.RegisterCreatedObjectUndo(player, "Add Lightkeeper");
             }
-            player.transform.SetPositionAndRotation(StartPosition, Quaternion.Euler(0, 90, 0));
+            player.transform.SetPositionAndRotation(start, rotation);
             player.tag = "Player";
             player.layer = PlayerLayer;
 
@@ -197,7 +206,8 @@ namespace SunSwitch.Art.EditorTools
                 follow = go.GetComponent<CinemachineCamera>();
             }
             follow.Target.TrackingTarget = player.transform.Find("PlayerCameraRoot");
-            follow.transform.SetPositionAndRotation(player.transform.position + new Vector3(-4, 2, 0), Quaternion.Euler(10, 90, 0));
+            var back = player.transform.rotation;
+            follow.transform.SetPositionAndRotation(player.transform.position + back * new Vector3(0, 2, -4), back * Quaternion.Euler(10, 0, 0));
             EditorUtility.SetDirty(follow);
         }
 
