@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using SunSwitch.Player;
 using UnityEngine;
 
 namespace SunSwitch.Art
@@ -7,9 +9,11 @@ namespace SunSwitch.Art
     /// Collectible shard (GDD §4: 12 in total, 3 per section, each Day-only or Night-only).
     /// Floats and turns slowly; on touch it hides and raises Collected.
     ///
-    /// The score / UI system (P3) subscribes to Collected and counts. On game over it calls
-    /// ResetAll() so every shard comes back. Which phase a shard lives in is the prefab variant
-    /// (Shard_Day / Shard_Night); the phase system shows / hides it like any phased object.
+    /// The game-flow side (ShardTracker) subscribes to Collected and counts. On game over it
+    /// calls ResetAll() so every shard comes back. Which phase a shard lives in is the prefab
+    /// variant (Shard_Day / Shard_Night): its PhaseObject turns the pickup trigger off and
+    /// shows the ghost while the other phase is active, so a shard can only be collected in
+    /// its own phase. This script never touches the collider for that reason.
     /// </summary>
     [RequireComponent(typeof(Collider))]
     public class Shard : MonoBehaviour
@@ -20,13 +24,14 @@ namespace SunSwitch.Art
         /// Raised by ResetAll so listeners can reset their count too.
         public static event Action ShardsReset;
 
+        [Tooltip("Also accepted besides a PlayerDeath component on the collider")]
         [SerializeField] string playerTag = "Player";
         [SerializeField] Transform visual;
         [SerializeField] float bobHeight = 0.12f;
         [SerializeField] float bobSeconds = 2.2f;
         [SerializeField] float turnDegreesPerSecond = 45f;
 
-        static readonly System.Collections.Generic.List<Shard> all = new System.Collections.Generic.List<Shard>();
+        static readonly List<Shard> all = new List<Shard>();
 
         Vector3 visualPos;
         float phase;
@@ -38,6 +43,14 @@ namespace SunSwitch.Art
         {
             foreach (var shard in all) shard.SetCollected(false);
             ShardsReset?.Invoke();
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            all.Clear();
+            Collected = null;
+            ShardsReset = null;
         }
 
         void Awake()
@@ -57,15 +70,17 @@ namespace SunSwitch.Art
 
         void OnTriggerEnter(Collider other)
         {
-            if (IsCollected || !other.CompareTag(playerTag)) return;
+            if (IsCollected || !IsPlayer(other)) return;
             SetCollected(true);
             Collected?.Invoke(this);
         }
 
+        bool IsPlayer(Collider other) =>
+            other.TryGetComponent<PlayerDeath>(out _) || (!string.IsNullOrEmpty(playerTag) && other.CompareTag(playerTag));
+
         void SetCollected(bool collected)
         {
             IsCollected = collected;
-            GetComponent<Collider>().enabled = !collected;
             if (visual != null) visual.gameObject.SetActive(!collected);
         }
 

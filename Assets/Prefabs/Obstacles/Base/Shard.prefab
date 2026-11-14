@@ -101,6 +101,7 @@ GameObject:
   - component: {fileID: 5958213776888517161}
   - component: {fileID: 4444441991035347111}
   - component: {fileID: 6404379010934979560}
+  - component: {fileID: 2352840137018055794}
   m_Layer: 0
   m_Name: Shard
   m_TagString: Untagged
@@ -162,3 +163,21 @@ MonoBehaviour:
   bobHeight: 0.12
   bobSeconds: 2.2
   turnDegreesPerSecond: 45
+--- !u!114 &2352840137018055794
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4343251544205685337}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 058b274478ad048399b5d141f03e4fc6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SunSwitch.Core.PhaseObject
+  phaseTag: 2
+  ghostMaterial: {fileID: 0}
+  renderers:
+  - {fileID: 7654318237648046302}
+  colliders:
+  - {fileID: 4444441991035347111}

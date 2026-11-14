@@ -8,6 +8,14 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 539787251721321278, guid: c409b99b23fe543cf8d70bfbe8d2281b, type: 3}
+      propertyPath: phaseTag
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 539787251721321278, guid: c409b99b23fe543cf8d70bfbe8d2281b, type: 3}
+      propertyPath: ghostMaterial
+      value: 
+      objectReference: {fileID: 2100000, guid: 7022c800d2b324007996a04238559fdf, type: 2}
     - target: {fileID: 3835372377804713061, guid: c409b99b23fe543cf8d70bfbe8d2281b, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0

@@ -16,6 +16,14 @@ PrefabInstance:
       propertyPath: m_Name
       value: KillBar_Night
       objectReference: {fileID: 0}
+    - target: {fileID: 6389476628939478591, guid: 7c2360b4d90cc41268ca385b8a445412, type: 3}
+      propertyPath: phaseTag
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6389476628939478591, guid: 7c2360b4d90cc41268ca385b8a445412, type: 3}
+      propertyPath: ghostMaterial
+      value: 
+      objectReference: {fileID: 2100000, guid: 7022c800d2b324007996a04238559fdf, type: 2}
     - target: {fileID: 6716580427222876366, guid: 7c2360b4d90cc41268ca385b8a445412, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 

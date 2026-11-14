@@ -100,6 +100,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1708715626627903662}
   - component: {fileID: 2612264328111406922}
+  - component: {fileID: 641727299548647668}
   m_Layer: 0
   m_Name: Platform_Bridge
   m_TagString: Untagged
@@ -144,3 +145,21 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 2, y: 0.4, z: 8}
   m_Center: {x: 0, y: -0.2, z: 0}
+--- !u!114 &641727299548647668
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6975506679798150852}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 058b274478ad048399b5d141f03e4fc6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SunSwitch.Core.PhaseObject
+  phaseTag: 2
+  ghostMaterial: {fileID: 0}
+  renderers:
+  - {fileID: 3691893203548349096}
+  colliders:
+  - {fileID: 2612264328111406922}
