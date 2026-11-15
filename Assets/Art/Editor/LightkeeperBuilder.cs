@@ -16,6 +16,7 @@ namespace SunSwitch.Art.EditorTools
     ///   │                      faces +Z, pivot at the feet. Add CharacterController + controller here.
     ///   └─ … chest bone
     ///        └─ Lantern        LanternGlow (Day / Night colour) + Lantern_Light point light
+    ///   └─ Landing Shadow      LandingShadow: ink spot on the ground below (where a jump lands)
     ///
     /// AC_Lightkeeper uses the Starter Assets Third Person parameter names
     /// (Speed, MotionSpeed, Grounded, Jump, FreeFall), so ThirdPersonController drives it unchanged.
@@ -25,6 +26,8 @@ namespace SunSwitch.Art.EditorTools
         const string MaterialDir = "Assets/Art/Materials/Character";
         const string BodyMaterialPath = MaterialDir + "/M_Lightkeeper.mat";
         const string GlowMaterialPath = MaterialDir + "/M_LanternGlow.mat";
+        const string ShadowMaterialPath = MaterialDir + "/M_LandingShadow.mat";
+        const string ShadowShader = "SunSwitch/LandingShadow";
         const string ControllerPath = LightkeeperPostprocessor.Folder + "AC_Lightkeeper.controller";
         const string PrefabDir = "Assets/Prefabs/Characters";
         const string PrefabPath = PrefabDir + "/Lightkeeper.prefab";
@@ -72,6 +75,7 @@ namespace SunSwitch.Art.EditorTools
                     r.sharedMaterials = Enumerable.Repeat(body, Mathf.Max(1, MeshOf(r).subMeshCount)).ToArray();
 
                 AddLantern(root, animator, lanternModel, body, glow);
+                AddLandingShadow(root);
 
                 PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
                 Debug.Log($"[Sun Switch] Built {PrefabPath}.");
@@ -130,6 +134,65 @@ namespace SunSwitch.Art.EditorTools
             so.FindProperty("glass").objectReferenceValue = glass;
             so.FindProperty("glowLight").objectReferenceValue = light;
             so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        /// <summary>
+        /// Sun Switch > Art > Add Landing Shadow To Lightkeeper: adds (or refreshes) only the landing
+        /// shadow on the existing prefab, keeping everything else as it is, so the scenes' player
+        /// instances keep their overrides. Build Lightkeeper includes it too.
+        /// </summary>
+        [MenuItem("Sun Switch/Art/Add Landing Shadow To Lightkeeper")]
+        public static void AddLandingShadowToPrefab()
+        {
+            if (AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath) == null) { Build(); return; }
+            var contents = PrefabUtility.LoadPrefabContents(PrefabPath);
+            try
+            {
+                AddLandingShadow(contents);
+                PrefabUtility.SaveAsPrefabAsset(contents, PrefabPath);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(contents);
+            }
+            AssetDatabase.SaveAssets();
+            Debug.Log($"[Sun Switch] Landing shadow added to {PrefabPath}.");
+        }
+
+        static void AddLandingShadow(GameObject root)
+        {
+            var shader = Shader.Find(ShadowShader);
+            if (shader == null) { Debug.LogError($"[Sun Switch] Shader '{ShadowShader}' missing."); return; }
+            EnsureFolder(MaterialDir);
+            var mat = AssetDatabase.LoadAssetAtPath<Material>(ShadowMaterialPath);
+            if (mat == null)
+            {
+                mat = new Material(shader);
+                AssetDatabase.CreateAsset(mat, ShadowMaterialPath);
+            }
+            mat.shader = shader;
+            EditorUtility.SetDirty(mat);
+
+            var spot = root.transform.Find("Landing Shadow");
+            if (spot == null)
+            {
+                spot = new GameObject("Landing Shadow").transform;
+                spot.SetParent(root.transform, false);
+            }
+            spot.localPosition = Vector3.zero;
+            spot.localRotation = Quaternion.Euler(90f, 0f, 0f);   // lying flat until LandingShadow places it
+            var filter = spot.GetComponent<MeshFilter>();
+            if (filter == null) filter = spot.gameObject.AddComponent<MeshFilter>();
+            filter.sharedMesh = Resources.GetBuiltinResource<Mesh>("Quad.fbx");
+            var renderer = spot.GetComponent<MeshRenderer>();
+            if (renderer == null) renderer = spot.gameObject.AddComponent<MeshRenderer>();
+            renderer.sharedMaterial = mat;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+            // Re-created each run so the prefab picks up the script's current default values.
+            var old = spot.GetComponent<LandingShadow>();
+            if (old != null) Object.DestroyImmediate(old, true);
+            spot.gameObject.AddComponent<LandingShadow>();
         }
 
         static Mesh MeshOf(Renderer r) =>

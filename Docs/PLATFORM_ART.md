@@ -17,9 +17,9 @@ Owner: platforms, platform prefabs, phase materials, character visual.
 | `Assets/Art/Meshes/` | Platform art | Real-size platform meshes (`Ruins/`) and obstacle meshes (`Obstacles/`) |
 | `Assets/Art/Editor/` | Platform art | Platform tools (`Sun Switch > Art > …`) |
 | `Assets/Art/Characters/Lightkeeper/` | Character art | Lightkeeper model (KayKit), lantern, animator controller |
-| `Assets/Art/Materials/Character/` | Character art | `M_Lightkeeper`, `M_LanternGlow` |
+| `Assets/Art/Materials/Character/` | Character art | `M_Lightkeeper`, `M_LanternGlow`, `M_LandingShadow` |
 | `Assets/Art/Materials/Sky/` | Look & feel | `M_StorybookSky` |
-| `Assets/Art/Scripts/` | Character art, look & feel | `LanternGlow`, `DayNightLook`, `DayNightDebugToggle`, `Shard`, `CheckpointLamp`, `CheckpointNotice`, `HintZone`, `HintPanel`, `PhaseFlipCue` (runtime). Obstacle and phase behaviour lives in `Assets/Scripts` (gameplay). |
+| `Assets/Art/Scripts/` | Character art, look & feel | `LanternGlow`, `DayNightLook`, `DayNightDebugToggle`, `Shard`, `CheckpointLamp`, `CheckpointNotice`, `HintZone`, `HintPanel`, `PhaseFlipCue`, `LandingShadow` (runtime). Obstacle and phase behaviour lives in `Assets/Scripts` (gameplay). |
 | `Assets/Prefabs/Characters/` | Character art | `Lightkeeper.prefab` |
 | `Assets/Scenes/Sandbox/Platforms_Sandbox.unity` | Platform art | Preview / test scene, not in Build Settings |
 | `Assets/Scenes/Sandbox/Level_Greybox.unity` | Look & feel | The whole level plan grey-boxed and playable, not in Build Settings |
@@ -227,9 +227,12 @@ A small hooded figure in a parchment-cream hood and cape with a muted-red tunic,
 
 ```
 Lightkeeper        model root: Animator (Humanoid, AC_Lightkeeper), faces +Z, pivot at the feet
-└─ … chest bone
-     └─ Lantern    LanternGlow + Lantern_Light (point light, no shadows)
+├─ … chest bone
+│    └─ Lantern    LanternGlow + Lantern_Light (point light, no shadows)
+└─ Landing Shadow  LandingShadow: ink spot on the ground straight below
 ```
+
+- **Landing shadow:** a soft ink spot (`SunSwitch/LandingShadow`, drawn procedurally, no texture) on the solid ground straight below the Lightkeeper, so players can see where a jump will land. It gets a little smaller and fainter with height (fully at 8 m), and is darker at Night so it still reads on blue platforms. It ignores triggers, and ghost platforms have no collision, so over a ghost or the void there's no spot: no spot, no ground. `Sun Switch > Art > Add Landing Shadow To Lightkeeper` adds it to the existing prefab without touching anything else; `Build Lightkeeper` includes it.
 
 ### Hand-off to player & camera (P2)
 
