@@ -30,10 +30,10 @@ namespace SunSwitch.Art.EditorTools
             Debug.Log($"[Sun Switch] Audio system configured in {scene.name}.");
         }
 
-        public static GameObject SetUpAudio(UnityEngine.SceneManagement.Scene scene)
+        public static GameObject SetUpAudio(UnityEngine.SceneManagement.Scene scene, GameObject targetManagers = null)
         {
             var existingManager = UnityEngine.Object.FindFirstObjectByType<AudioManager>(FindObjectsInactive.Include);
-            GameObject audioObj = existingManager != null ? existingManager.gameObject : null;
+            GameObject audioObj = existingManager != null ? existingManager.gameObject : targetManagers;
 
             if (audioObj == null)
             {

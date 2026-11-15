@@ -317,7 +317,7 @@ namespace SunSwitch.Player
                 _coyoteTimer = 0f;
                 _jumpTimeoutDelta = JumpTimeout;
                 if (_hasAnimator) _animator.SetBool(_animIDJump, true);
-                AudioManager.Instance?.Play(SfxId.Jump);
+                if (AudioManager.Instance != null) AudioManager.Instance.Play(SfxId.Jump);
             }
 
             // Gravity, heavier on the way down, capped at terminal velocity

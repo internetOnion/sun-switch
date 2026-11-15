@@ -42,7 +42,7 @@ namespace SunSwitch.Obstacles
             player.AddExternalVelocity(transform.TransformDirection(direction.normalized) * launchSpeed);
 
             if (launchSound != null) launchSound.Play();
-            else AudioManager.Instance?.Play(SfxId.JumpPad);
+            else if (AudioManager.Instance != null) AudioManager.Instance.Play(SfxId.JumpPad);
             if (visual != null)
             {
                 if (_squash != null) StopCoroutine(_squash);
