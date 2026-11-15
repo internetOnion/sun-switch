@@ -58,15 +58,17 @@ namespace SunSwitch.Art.EditorTools
         }
 
         /// The player, follow camera, managers, menu and HUD for a scene, with the player at
-        /// start facing along rotation. Also used by the level grey-box. Returns false if the
-        /// Starter Assets input actions are missing.
-        internal static bool SetUpPlayableRig(UnityEngine.SceneManagement.Scene scene, Vector3 start, Quaternion rotation)
+        /// start facing along rotation. Also used by the level grey-box and Main.unity. Returns
+        /// false if the Starter Assets input actions are missing. shardTotal 0 counts the shards in
+        /// the scene; Main passes the tower's total, since its shards are in the section scenes.
+        internal static bool SetUpPlayableRig(UnityEngine.SceneManagement.Scene scene, Vector3 start, Quaternion rotation,
+            int shardTotal = 0, string managersName = "Sandbox Managers")
         {
             var player = SetUpPlayer(scene, start, rotation);
             if (player == null) return false;
             SetUpCamera(scene, player);
-            var managers = SetUpManagers(scene);
-            SetUpGameFlow(scene, managers);
+            var managers = SetUpManagers(scene, managersName);
+            SetUpGameFlow(scene, managers, shardTotal);
             return true;
         }
 
@@ -213,19 +215,22 @@ namespace SunSwitch.Art.EditorTools
 
         // ---------------------------------------------------------------- managers
 
-        static GameObject SetUpManagers(UnityEngine.SceneManagement.Scene scene)
+        static GameObject SetUpManagers(UnityEngine.SceneManagement.Scene scene, string managersName)
         {
             if (Object.FindFirstObjectByType<WorldPhase>(FindObjectsInactive.Include) == null)
-                DayNightLookSetup.AddToOpenScene();   // adds DayNightLook + WorldPhase in sandboxes
+                DayNightLookSetup.AddToOpenScene();   // adds DayNightLook (+ WorldPhase in sandboxes)
 
             var respawn = Object.FindFirstObjectByType<RespawnManager>(FindObjectsInactive.Include);
             if (respawn == null)
             {
-                var go = new GameObject("Sandbox Managers");
-                Undo.RegisterCreatedObjectUndo(go, "Add sandbox managers");
+                var go = new GameObject(managersName);
+                Undo.RegisterCreatedObjectUndo(go, "Add managers");
                 SceneManagerMove(go, scene);
                 respawn = go.AddComponent<RespawnManager>();
             }
+            // Outside sandboxes the Day/Night setup leaves WorldPhase to the managers.
+            if (Object.FindFirstObjectByType<WorldPhase>(FindObjectsInactive.Include) == null)
+                respawn.gameObject.AddComponent<WorldPhase>();
             // GameManager decides between respawn and Game Over; respawning here too would do it twice.
             var so = new SerializedObject(respawn);
             so.FindProperty("respawnOnDeath").boolValue = false;
@@ -239,7 +244,7 @@ namespace SunSwitch.Art.EditorTools
 
         /// Part B: GameManager + lives, timer and shards on the managers, the storybook menu
         /// driven by GameMenuFlow, the HUD, and an EventSystem for the menu buttons.
-        static void SetUpGameFlow(UnityEngine.SceneManagement.Scene scene, GameObject managers)
+        static void SetUpGameFlow(UnityEngine.SceneManagement.Scene scene, GameObject managers, int shardTotal)
         {
             var lives = GetOrAdd<LivesSystem>(managers);
             var timer = GetOrAdd<RunTimer>(managers);
@@ -253,7 +258,8 @@ namespace SunSwitch.Art.EditorTools
             gso.ApplyModifiedPropertiesWithoutUndo();
 
             // The sandbox has fewer than the tower's 12 shards: count the ones in the scene.
-            int shardCount = Object.FindObjectsByType<Shard>(FindObjectsInactive.Include, FindObjectsSortMode.None).Length;
+            int shardCount = shardTotal > 0 ? shardTotal
+                : Object.FindObjectsByType<Shard>(FindObjectsInactive.Include, FindObjectsSortMode.None).Length;
             var sso = new SerializedObject(shards);
             sso.FindProperty("total").intValue = Mathf.Max(1, shardCount);
             sso.ApplyModifiedPropertiesWithoutUndo();

@@ -161,7 +161,7 @@ GDD §5 obstacle toolkit. Every obstacle comes in `_Day`, `_Night` and `_Both` v
 - **Controls:** WASD / mouse to move and look, Space to jump, **Right Mouse** to switch, **Esc** to pause, **T** to force a switch (ignores cooldown and overlap).
 - **Test Course** (along +x at z = −16): start checkpoint → Both hop → Day and Night stepping stones (switch mid-run) → kill bar → jump pad up to a Night-only ledge 5 m higher (switch in the air) with a Night shard → checkpoint → moving platform → Day landing → Night spikes with a Day shard above them → Night wall to pass in Day → one more hop to the `SummitGoal`. A `KillPlane` under it catches falls.
 
-This is a test rig, not the game's player: the player prefab, follow camera and managers for `Main.unity` belong to P2 and P1. The component list above is the same one their scene checklist asks for, so it can be copied. For `Main.unity`, drop in `MenuRoot` (add `GameMenuFlow`), `HUD.prefab`, an `EventSystem` and a `SummitGoal`, and set `ShardTracker` back to 12.
+This is a test rig, not the game's player: the player prefab, follow camera and managers for `Main.unity` belong to P2 and P1. The component list above is the same one their scene checklist asks for, so it can be copied. `Main.unity` is made by `Sun Switch > Build Game Scenes` (see Game scenes below).
 
 ## Level grey-box
 
@@ -184,6 +184,21 @@ This is a test rig, not the game's player: the player prefab, follow camera and 
 
   A hint is done once the player walks out of its box alive, and doesn't come back. Falling out of the bottom or dying doesn't count, so the lesson is still there after the respawn. Edit the text and boxes in `LevelGreyboxBuilder.cs`; select a hint to see its box as a gold gizmo.
 - **Kill bars:** each arm reaches about 3 m from the post. On a 6 × 6 m platform, only the corners are outside that reach, so aim landings at a corner. Crossing behind an arm, moving the same way it does, is the easy line.
+
+## Game scenes
+
+`Sun Switch > Build Game Scenes` makes the scenes the game ships with, from the grey-box layout:
+
+| Scene | Holds |
+|---|---|
+| `Assets/Scenes/Main.unity` | Day/Night look and sun, `Managers` (`WorldPhase`, `RespawnManager`, `GameManager`, `LivesSystem`, `RunTimer`, `ShardTracker` set to 12, `SectionLoader`), the Lightkeeper on CP1, the follow camera, `MenuRoot` with `GameMenuFlow`, the HUD and an `EventSystem` |
+| `Assets/Scenes/Sections/Section1-4.unity` | One grey-box section root each: platforms, shards, checkpoints, hazards and hints. `Section4` also has the Summit `AutoCycleZone` and the `SummitGoal` |
+
+- **How it runs:** Build Settings lists `Main` first, then `Section1` to `Section4`. Press Play in `Main`; `SectionLoader` loads the four sections into it (about 0.1 s) and `GameManager` waits for them before showing the Start screen. `Main` stays the active scene, so its lighting and fog are the ones you see.
+- **Editing a section:** open `Main`, then drag `SectionN` into the Hierarchy to open it alongside. Play still works: sections that are already open aren't loaded twice.
+- **Owners:** `Main` is P1's; `Section1` P3, `Section2` P2, `Section3` P1, `Section4` P4 (GDD). Once a section scene exists, running the builder again never touches it, so owners can replace the grey-box pieces freely. Delete a section scene to make it again from `LevelGreyboxBuilder.cs`. `Main` gets missing pieces added and keeps the rest.
+- **Sandboxes stay test scenes:** `Platforms_Sandbox` and `Level_Greybox` keep the T-key debug switch and aren't in Build Settings. `StartGame.unity` and `Assets/UI/Scenes/MenuPreview.unity` are the menu team's preview scenes. `SampleScene` stays listed but switched off.
+- **Checked:** a development player build of the five scenes loads them all, keeps one `WorldPhase` and one `DayNightLook`, counts 6 checkpoints, 12 shards and 6 hints, starts on CP1 from the Start screen, respawns at a checkpoint in another section, and wins at the `SummitGoal` in `Section4`.
 
 ## HUD
 
