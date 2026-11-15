@@ -13,13 +13,13 @@ Owner: platforms, platform prefabs, phase materials, character visual.
 | `Assets/Prefabs/Obstacles/` | Look & feel | Obstacle prefabs level designers place (`KillBar_Day`, `JumpPad_Both`, `Shard_Night`, `KillPlane`, `SummitGoal`, …); `Base/` is not for placing |
 | `Assets/Art/Materials/Obstacles/` | Look & feel | `M_Shard_Day/Night` |
 | `Assets/Prefabs/UI/` | Look & feel | `HUD.prefab` (in-game HUD) |
-| `Assets/Art/UI/` | Look & feel | HUD icon sprites (`HUD_Flame`, `HUD_Sun`, `HUD_Moon`, `HUD_Ring`, `HUD_Shard`) |
+| `Assets/Art/UI/` | Look & feel | HUD icon sprites (`HUD_Flame`, `HUD_Sun`, `HUD_Moon`, `HUD_Ring`, `HUD_Shard`) and `M_InkIris` (death wipe) |
 | `Assets/Art/Meshes/` | Platform art | Real-size platform meshes (`Ruins/`) and obstacle meshes (`Obstacles/`) |
 | `Assets/Art/Editor/` | Platform art | Platform tools (`Sun Switch > Art > …`) |
 | `Assets/Art/Characters/Lightkeeper/` | Character art | Lightkeeper model (KayKit), lantern, animator controller |
 | `Assets/Art/Materials/Character/` | Character art | `M_Lightkeeper`, `M_LanternGlow`, `M_LandingShadow` |
 | `Assets/Art/Materials/Sky/` | Look & feel | `M_StorybookSky` |
-| `Assets/Art/Scripts/` | Character art, look & feel | `LanternGlow`, `DayNightLook`, `DayNightDebugToggle`, `Shard`, `CheckpointLamp`, `CheckpointNotice`, `HintZone`, `HintPanel`, `PhaseFlipCue`, `LandingShadow` (runtime). Obstacle and phase behaviour lives in `Assets/Scripts` (gameplay). |
+| `Assets/Art/Scripts/` | Character art, look & feel | `LanternGlow`, `DayNightLook`, `DayNightDebugToggle`, `Shard`, `CheckpointLamp`, `CheckpointNotice`, `HintZone`, `HintPanel`, `PhaseFlipCue`, `LandingShadow`, `DeathRespawnFx`, `InkIris` (runtime). Obstacle and phase behaviour lives in `Assets/Scripts` (gameplay). |
 | `Assets/Prefabs/Characters/` | Character art | `Lightkeeper.prefab` |
 | `Assets/Scenes/Sandbox/Platforms_Sandbox.unity` | Platform art | Preview / test scene, not in Build Settings |
 | `Assets/Scenes/Sandbox/Level_Greybox.unity` | Look & feel | The whole level plan grey-boxed and playable, not in Build Settings |
@@ -73,6 +73,7 @@ Tick *Is Start* on `Trigger`'s `Checkpoint` for the very first one in Section 1.
 | Reached | About 1 s: the light flashes, the lamp pops, a beam shoots 7 m up, a ring rolls across the platform and sparks rise. The HUD shows "Checkpoint" under the timer (`CheckpointNotice`). Not shown for the start checkpoint |
 | Current (the respawn point) | Bright, breathing gently, lighting the platform |
 | Reached earlier | Still lit, but dimmer, so the current one stands out |
+| Respawned at | A short flash when the player comes back to it after a death |
 
 The colour follows the phase like the Lightkeeper's lantern: gold by Day, blue by Night. Reaching an older checkpoint again makes it current and plays the burst again. Tuning (brightness per state, burst length, beam height, ring size, spark count) is on `CheckpointLamp`. `Update Platform Prefabs` recreates it with the script's defaults.
 
@@ -210,6 +211,7 @@ This is a test rig, not the game's player: the player prefab, follow camera and 
 - **Run** (top centre): `PhaseCooldownIcon` (sun or moon inside a gold ring that refills over the switch cooldown, shakes red when a switch is blocked) and the run timer. The line under the timer is a `PhaseThemedGraphic`: gold by Day, blue by Night.
 - **Shards** (top right): crystal and `x/total`.
 - **Checkpoint notice** (under the timer): "Checkpoint" with a lamp flame, for about 2 s when a new checkpoint is reached (`CheckpointNotice`).
+- **Ink wipe** (full screen, behind the plates): the death / respawn iris (`InkIris`, `M_InkIris`), so the life just lost stays visible over the ink.
 - **Hint** (bottom centre): a parchment strip with the instruction for the `HintZone` the player is in. When a switch is blocked by a ghost, it says "Can't switch while inside a ghost. Step out of it first." for 2.5 s (`HintPanel`). Cross-fades between messages.
 - `HUDController` on the root (with a `CanvasGroup`) shows it while playing or paused. The canvas is an overlay with sort order −10, so the menu draws over it.
 - Icons are baked sprites in `Assets/Art/UI` (ink outline and white fill), tinted by the Image colour. The text uses Unity's built-in font, like the menu, until the licensed display font arrives.
@@ -229,10 +231,13 @@ A small hooded figure in a parchment-cream hood and cape with a muted-red tunic,
 Lightkeeper        model root: Animator (Humanoid, AC_Lightkeeper), faces +Z, pivot at the feet
 ├─ … chest bone
 │    └─ Lantern    LanternGlow + Lantern_Light (point light, no shadows)
-└─ Landing Shadow  LandingShadow: ink spot on the ground straight below
+├─ Landing Shadow  LandingShadow: ink spot on the ground straight below
+└─ Death FX        DeathRespawnFx: ink burst on a death, sparkles on the respawn
 ```
 
-- **Landing shadow:** a soft ink spot (`SunSwitch/LandingShadow`, drawn procedurally, no texture) on the solid ground straight below the Lightkeeper, so players can see where a jump will land. It gets a little smaller and fainter with height (fully at 8 m), and is darker at Night so it still reads on blue platforms. It ignores triggers, and ghost platforms have no collision, so over a ghost or the void there's no spot: no spot, no ground. `Sun Switch > Art > Add Landing Shadow To Lightkeeper` adds it to the existing prefab without touching anything else; `Build Lightkeeper` includes it.
+- **Death and respawn:** on a death the Lightkeeper bursts into ink scraps and disappears, and the HUD's ink iris (`InkIris`) closes in on the spot. It stays shut while the camera jumps back to the checkpoint, which hides the cut. On the respawn the iris opens on the player, sparkles rise around them in the phase colour, and the checkpoint's lamp gives a short flash. On the last life the ink stays shut under the Game Over screen; the next run, or the Start screen, opens it again.
+- **Updating the prefab:** `Sun Switch > Art > Update Lightkeeper Effects` adds or refreshes only the landing shadow and the death / respawn effect on the existing prefab, so the scenes' player instances keep their overrides. `Build Lightkeeper` includes both.
+- **Landing shadow:** a soft ink spot (`SunSwitch/LandingShadow`, drawn procedurally, no texture) on the solid ground straight below the Lightkeeper, so players can see where a jump will land. It gets a little smaller and fainter with height (fully at 8 m), and is darker at Night so it still reads on blue platforms. It ignores triggers, and ghost platforms have no collision, so over a ghost or the void there's no spot: no spot, no ground. While the character is dying the spot is hidden.
 
 ### Hand-off to player & camera (P2)
 

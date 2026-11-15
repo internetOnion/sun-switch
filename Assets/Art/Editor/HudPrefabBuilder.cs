@@ -13,6 +13,7 @@ namespace SunSwitch.Art.EditorTools
     /// style (Docs/UI_ART_STYLE.md: ink on parchment, sun gold, night indigo):
     ///
     ///   HUD                 Canvas (overlay, under the menu) + CanvasGroup + HUDController
+    ///   ├─ Ink Wipe         full-screen ink iris that closes on a death and opens on respawn (InkIris)
     ///   ├─ Lives            parchment plate, three lantern flames (lost ones grey out)
     ///   ├─ Run              parchment plate: PhaseCooldownIcon (ring + sun / moon) and the timer
     ///   ├─ Shards           parchment plate: crystal icon and "x/12"
@@ -54,6 +55,18 @@ namespace SunSwitch.Art.EditorTools
             scaler.referenceResolution = new Vector2(1920, 1080);
             scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand;
             root.AddComponent<CanvasGroup>();
+
+            // Ink wipe: first child, so the plates (and the life just lost) stay on top of the ink.
+            var wipe = new GameObject("Ink Wipe", typeof(RectTransform)).GetComponent<RectTransform>();
+            wipe.SetParent(root.transform, false);
+            wipe.anchorMin = Vector2.zero;
+            wipe.anchorMax = Vector2.one;
+            wipe.offsetMin = wipe.offsetMax = Vector2.zero;
+            var wipeImage = wipe.gameObject.AddComponent<Image>();
+            wipeImage.material = IrisMaterial();
+            wipeImage.raycastTarget = false;
+            wipeImage.enabled = false;
+            wipe.gameObject.AddComponent<SunSwitch.Art.InkIris>();
 
             // Lives: top left.
             var lives = Plate(root.transform, "Lives", new Vector2(0, 1), new Vector2(40, -36), new Vector2(300, 112));
@@ -145,6 +158,22 @@ namespace SunSwitch.Art.EditorTools
         }
 
         // ---------------------------------------------------------------- layout
+
+        static Material IrisMaterial()
+        {
+            const string path = SpriteDir + "/M_InkIris.mat";
+            var shader = Shader.Find("SunSwitch/UI/InkIris");
+            var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (mat == null)
+            {
+                mat = new Material(shader);
+                AssetDatabase.CreateAsset(mat, path);
+            }
+            mat.shader = shader;
+            mat.SetColor("_Color", Ink);
+            EditorUtility.SetDirty(mat);
+            return mat;
+        }
 
         static RectTransform Plate(Transform parent, string name, Vector2 anchor, Vector2 position, Vector2 size)
         {

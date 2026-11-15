@@ -16,7 +16,8 @@ namespace SunSwitch.Art.EditorTools
     ///   │                      faces +Z, pivot at the feet. Add CharacterController + controller here.
     ///   └─ … chest bone
     ///        └─ Lantern        LanternGlow (Day / Night colour) + Lantern_Light point light
-    ///   └─ Landing Shadow      LandingShadow: ink spot on the ground below (where a jump lands)
+    ///   ├─ Landing Shadow      LandingShadow: ink spot on the ground below (where a jump lands)
+    ///   └─ Death FX            DeathRespawnFx: ink burst on a death, sparkles on the respawn
     ///
     /// AC_Lightkeeper uses the Starter Assets Third Person parameter names
     /// (Speed, MotionSpeed, Grounded, Jump, FreeFall), so ThirdPersonController drives it unchanged.
@@ -76,6 +77,7 @@ namespace SunSwitch.Art.EditorTools
 
                 AddLantern(root, animator, lanternModel, body, glow);
                 AddLandingShadow(root);
+                AddDeathFx(root);
 
                 PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
                 Debug.Log($"[Sun Switch] Built {PrefabPath}.");
@@ -137,18 +139,19 @@ namespace SunSwitch.Art.EditorTools
         }
 
         /// <summary>
-        /// Sun Switch > Art > Add Landing Shadow To Lightkeeper: adds (or refreshes) only the landing
-        /// shadow on the existing prefab, keeping everything else as it is, so the scenes' player
-        /// instances keep their overrides. Build Lightkeeper includes it too.
+        /// Sun Switch > Art > Update Lightkeeper Effects: adds (or refreshes) only the landing shadow
+        /// and the death / respawn effect on the existing prefab, keeping everything else as it is,
+        /// so the scenes' player instances keep their overrides. Build Lightkeeper includes them too.
         /// </summary>
-        [MenuItem("Sun Switch/Art/Add Landing Shadow To Lightkeeper")]
-        public static void AddLandingShadowToPrefab()
+        [MenuItem("Sun Switch/Art/Update Lightkeeper Effects")]
+        public static void UpdateEffectsOnPrefab()
         {
             if (AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath) == null) { Build(); return; }
             var contents = PrefabUtility.LoadPrefabContents(PrefabPath);
             try
             {
                 AddLandingShadow(contents);
+                AddDeathFx(contents);
                 PrefabUtility.SaveAsPrefabAsset(contents, PrefabPath);
             }
             finally
@@ -156,7 +159,7 @@ namespace SunSwitch.Art.EditorTools
                 PrefabUtility.UnloadPrefabContents(contents);
             }
             AssetDatabase.SaveAssets();
-            Debug.Log($"[Sun Switch] Landing shadow added to {PrefabPath}.");
+            Debug.Log($"[Sun Switch] Lightkeeper effects updated in {PrefabPath}.");
         }
 
         static void AddLandingShadow(GameObject root)
@@ -193,6 +196,23 @@ namespace SunSwitch.Art.EditorTools
             var old = spot.GetComponent<LandingShadow>();
             if (old != null) Object.DestroyImmediate(old, true);
             spot.gameObject.AddComponent<LandingShadow>();
+        }
+
+        static void AddDeathFx(GameObject root)
+        {
+            var fx = root.transform.Find("Death FX");
+            if (fx == null)
+            {
+                fx = new GameObject("Death FX").transform;
+                fx.SetParent(root.transform, false);
+            }
+            // Re-created each run so the prefab picks up the script's current default values.
+            var old = fx.GetComponent<DeathRespawnFx>();
+            if (old != null) Object.DestroyImmediate(old, true);
+            var comp = fx.gameObject.AddComponent<DeathRespawnFx>();
+            var so = new SerializedObject(comp);
+            so.FindProperty("discMaterial").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Material>(ShadowMaterialPath);
+            so.ApplyModifiedPropertiesWithoutUndo();
         }
 
         static Mesh MeshOf(Renderer r) =>

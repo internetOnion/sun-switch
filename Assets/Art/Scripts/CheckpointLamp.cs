@@ -14,6 +14,8 @@ namespace SunSwitch.Art
     ///   Current  the respawn point: bright, gently breathing, lighting the platform
     ///   Kept     reached earlier but not the respawn point any more: lit, but dimmer
     ///
+    /// Respawning here after a death gives a short flash (no beam), so the lamp says "back here".
+    ///
     /// Gold by Day, moon blue by Night, like the Lightkeeper's lantern (follows DayNightLook).
     /// Reads the gameplay side without changing it: Checkpoint switches its "Lit" indicator on
     /// when reached, RespawnManager.Current says which one is current, and
@@ -53,6 +55,9 @@ namespace SunSwitch.Art
         MaterialPropertyBlock block;
         float dayBlend = 1f, dayTarget = 1f;
         float burstT = -1f;
+        float respawnT = -1f;
+        bool playerDied;
+        const float RespawnFlashSeconds = 0.6f;
         Vector3 lampScale, beamScale, ringScale;
         Transform[] sparkObjects;
         Vector3[] sparkVelocity;
@@ -61,6 +66,7 @@ namespace SunSwitch.Art
 
         public State Current { get; private set; }
         public bool Bursting => burstT >= 0f && burstT < burstSeconds;
+        public bool RespawnFlashing => respawnT >= 0f;
 
         void Awake()
         {
@@ -74,6 +80,8 @@ namespace SunSwitch.Art
         void OnEnable()
         {
             GameEvents.OnCheckpointReached += HandleReached;
+            GameEvents.OnPlayerDied += HandleDied;
+            GameEvents.OnPlayerRespawned += HandleRespawned;
             DayNightLook.Changed += HandlePhase;
             dayTarget = dayBlend = DayNightLook.CurrentIsDay ? 1f : 0f;
         }
@@ -81,6 +89,8 @@ namespace SunSwitch.Art
         void OnDisable()
         {
             GameEvents.OnCheckpointReached -= HandleReached;
+            GameEvents.OnPlayerDied -= HandleDied;
+            GameEvents.OnPlayerRespawned -= HandleRespawned;
             DayNightLook.Changed -= HandlePhase;
         }
 
@@ -93,6 +103,15 @@ namespace SunSwitch.Art
         {
             dayTarget = isDay ? 1f : 0f;
             if (instant) dayBlend = dayTarget;
+        }
+
+        void HandleDied(DeathCause _) => playerDied = true;
+
+        void HandleRespawned()
+        {
+            var respawn = RespawnManager.Instance;
+            if (playerDied && respawn != null && respawn.Current == checkpoint) respawnT = 0f;
+            playerDied = false;
         }
 
         void HandleReached(Checkpoint reached)
@@ -138,6 +157,15 @@ namespace SunSwitch.Art
                 pop = 1f + 0.45f * Mathf.Sin(Mathf.Min(1f, burstT / 0.35f) * Mathf.PI) ;
                 AnimateBurst(k);
                 if (k >= 1f) EndBurst();
+            }
+
+            if (respawnT >= 0f)
+            {
+                respawnT += Time.deltaTime;
+                float f = 1f - Mathf.SmoothStep(0f, 1f, respawnT / RespawnFlashSeconds);
+                emission = Mathf.Lerp(emission, flash.x * 0.8f, f);
+                intensity = Mathf.Lerp(intensity, flash.y * 0.6f, f);
+                if (respawnT >= RespawnFlashSeconds) respawnT = -1f;
             }
 
             if (lamp != null)
