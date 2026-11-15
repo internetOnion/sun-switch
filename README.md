@@ -2,6 +2,8 @@
 
 A 3D obby where the world flips between **Day** and **Night**. Platforms, hazards and shards exist in Day, Night, or both. You play the last Lightkeeper and switch the phase to make the path appear as you climb a tower of floating sky-ruins.
 
+**[Play Sun Switch in your browser](https://internetonion.github.io/sun-switch/)**
+
 ## Goal
 
 Climb the tower to the summit and restore the cycle of the sun and moon. Along the way, collect the 12 shards (3 per section) and finish with as little time and as few deaths as you can.
