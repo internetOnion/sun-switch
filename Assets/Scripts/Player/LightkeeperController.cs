@@ -1,4 +1,5 @@
 using SunSwitch.Core;
+using SunSwitch.LookAndFeel;
 using StarterAssets;
 using UnityEngine;
 #if ENABLE_INPUT_SYSTEM
@@ -316,6 +317,7 @@ namespace SunSwitch.Player
                 _coyoteTimer = 0f;
                 _jumpTimeoutDelta = JumpTimeout;
                 if (_hasAnimator) _animator.SetBool(_animIDJump, true);
+                if (AudioManager.Instance != null) AudioManager.Instance.Play(SfxId.Jump);
             }
 
             // Gravity, heavier on the way down, capped at terminal velocity

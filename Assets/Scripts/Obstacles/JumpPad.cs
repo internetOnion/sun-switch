@@ -1,5 +1,6 @@
 using System.Collections;
 using SunSwitch.Player;
+using SunSwitch.LookAndFeel;
 using UnityEngine;
 
 namespace SunSwitch.Obstacles
@@ -41,6 +42,7 @@ namespace SunSwitch.Obstacles
             player.AddExternalVelocity(transform.TransformDirection(direction.normalized) * launchSpeed);
 
             if (launchSound != null) launchSound.Play();
+            else if (AudioManager.Instance != null) AudioManager.Instance.Play(SfxId.JumpPad);
             if (visual != null)
             {
                 if (_squash != null) StopCoroutine(_squash);

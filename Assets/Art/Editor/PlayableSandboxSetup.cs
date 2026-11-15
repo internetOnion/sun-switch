@@ -51,7 +51,7 @@ namespace SunSwitch.Art.EditorTools
             }
 
             BuildCourse(scene);
-            if (!SetUpPlayableRig(scene, StartPosition, Quaternion.Euler(0, 90, 0))) return;
+if (!SetUpPlayableRig(scene, StartPosition, Quaternion.Euler(0, 90, 0))) return;
 
             EditorSceneManager.MarkSceneDirty(scene);
             Debug.Log("[Sun Switch] Sandbox is playable: Play on the Start screen, then WASD / mouse to move, Space to jump, Right Mouse to switch, Esc to pause, T to force a switch.");
@@ -69,6 +69,8 @@ namespace SunSwitch.Art.EditorTools
             SetUpCamera(scene, player);
             var managers = SetUpManagers(scene, managersName);
             SetUpGameFlow(scene, managers, shardTotal);
+            AudioSetup.SetUpAudio(scene);
+            AudioSetup.SetUpPlayerAudio(scene);
             return true;
         }
 

@@ -1,3 +1,4 @@
+using SunSwitch.LookAndFeel;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -114,6 +115,7 @@ namespace SunSwitch.UI
         public void Back()
         {
             if (history.Count == 0) return;
+            if (AudioManager.Instance != null) AudioManager.Instance.Play(SfxId.UIClick);
             if (current == MenuScreen.Settings && flow != null && flow.ProvidesSettings) flow.SaveSettings();
             Binding(current).root.gameObject.SetActive(false);
             var previous = history.Pop(); Activate(previous.screen);
@@ -132,6 +134,7 @@ namespace SunSwitch.UI
         public void Execute(MenuCommandId command)
         {
             if (pending) return;
+            if (AudioManager.Instance != null) AudioManager.Instance.Play(SfxId.UIClick);
             switch (command)
             {
                 case MenuCommandId.Settings: Push(MenuScreen.Settings); break;
