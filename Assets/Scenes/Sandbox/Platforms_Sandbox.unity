@@ -2994,8 +2994,18 @@ MonoBehaviour:
   MoveSpeed: 5
   RotationSmoothTime: 0.12
   SpeedChangeRate: 10
-  LandingAudioClip: {fileID: 0}
-  FootstepAudioClips: []
+  LandingAudioClip: {fileID: 8300000, guid: ff697d3070687ce4583faa0561a145a2, type: 3}
+  FootstepAudioClips:
+  - {fileID: 8300000, guid: 72f526a6a9890f643a88e85a61c86c8a, type: 3}
+  - {fileID: 8300000, guid: 85016e0f2b01da248b9663dd49a161b0, type: 3}
+  - {fileID: 8300000, guid: 186de84b3207156479abe98f4958fed0, type: 3}
+  - {fileID: 8300000, guid: 1a91fcd19acf1e54bba0945d9f390849, type: 3}
+  - {fileID: 8300000, guid: 14e8a8d2158bec840b56c54f5266e692, type: 3}
+  - {fileID: 8300000, guid: 29841e7d5bbfb5b419c9ad16ca8bc4c1, type: 3}
+  - {fileID: 8300000, guid: dd1af302b8902684d9381de1f2d3a5af, type: 3}
+  - {fileID: 8300000, guid: 67c8b33e424ccdc4486edf538ab91c5a, type: 3}
+  - {fileID: 8300000, guid: 274649b0e221539409070ebf6c18918b, type: 3}
+  - {fileID: 8300000, guid: a3194b8bbc96ef84fab1f98f4b7dae3e, type: 3}
   FootstepAudioVolume: 0.5
   JumpHeight: 1.2
   Gravity: -15
@@ -4264,6 +4274,8 @@ GameObject:
   m_Component:
   - component: {fileID: 2117809818}
   - component: {fileID: 2117809817}
+  - component: {fileID: 2117809820}
+  - component: {fileID: 2117809821}
   m_Layer: 0
   m_Name: Sandbox Managers
   m_TagString: Untagged
@@ -4303,6 +4315,83 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2117809820
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2117809816}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 68d3dcc4baaf64c35b949db51c50b362, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SunSwitch.LookAndFeel.AudioManager
+  sounds:
+  - id: 0
+    clips:
+    - {fileID: 8300000, guid: 640ce30634fddb7b35ac356ad7d35421, type: 3}
+    volume: 0.85
+  - id: 1
+    clips:
+    - {fileID: 8300000, guid: b879f3a95d914eddc0607303cd4c5b5a, type: 3}
+    volume: 0.85
+  - id: 2
+    clips:
+    - {fileID: 8300000, guid: f90c8d8955474e8736f5ecfd7db8aa3a, type: 3}
+    volume: 0.75
+  - id: 3
+    clips:
+    - {fileID: 8300000, guid: 9b2c9bb89df7711a3235e447a0090720, type: 3}
+    volume: 0.5
+  - id: 4
+    clips:
+    - {fileID: 8300000, guid: 01bccc712fcfc6bb07972665e23af737, type: 3}
+    volume: 0.85
+  - id: 5
+    clips:
+    - {fileID: 8300000, guid: 4372f605d307fca0fc06960b783e4cff, type: 3}
+    volume: 0.8
+  - id: 6
+    clips:
+    - {fileID: 8300000, guid: 7d170213dc34f07c7baaf1a69b11eb78, type: 3}
+    volume: 0.85
+  - id: 7
+    clips:
+    - {fileID: 8300000, guid: e38885e5f007829b98c1cd21f88c5a63, type: 3}
+    volume: 0.75
+  - id: 8
+    clips:
+    - {fileID: 8300000, guid: 2c927d4710735a1ba9742744d36e12ec, type: 3}
+    volume: 0.65
+  - id: 9
+    clips:
+    - {fileID: 8300000, guid: 123c91eb67717cb263a421f116ea12aa, type: 3}
+    volume: 0.9
+  - id: 10
+    clips:
+    - {fileID: 8300000, guid: e9e80ce448c0d3d617f20213c0dc8bf8, type: 3}
+    volume: 0.85
+  voices: 8
+  pitchVariation: 0.05
+--- !u!114 &2117809821
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2117809816}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2b299986d488474792a782981fac04e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SunSwitch.LookAndFeel.MusicPlayer
+  dayLayer: {fileID: 8300000, guid: 40ed1d973045accbc38dc6d884ad2fed, type: 3}
+  nightLayer: {fileID: 8300000, guid: 1a226a565310781293b335e8b4f3f991, type: 3}
+  menuTrack: {fileID: 8300000, guid: c3c0a0f9e57c854dacf6b2bfc281c691, type: 3}
+  volume: 0.5
+  fadeTime: 0.5
+  startInMenu: 0
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

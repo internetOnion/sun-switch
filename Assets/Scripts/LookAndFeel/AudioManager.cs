@@ -54,6 +54,7 @@ namespace SunSwitch.LookAndFeel
             GameEvents.OnPlayerDied += OnDied;
             GameEvents.OnCheckpointReached += OnCheckpoint;
             GameEvents.OnShardCollected += OnShard;
+            SunSwitch.Art.Shard.Collected += OnShardDirect;
             GameEvents.OnSummitReached += OnSummit;
             GameEvents.OnGameStateChanged += OnState;
             Subscribe();
@@ -66,6 +67,7 @@ namespace SunSwitch.LookAndFeel
             GameEvents.OnPlayerDied -= OnDied;
             GameEvents.OnCheckpointReached -= OnCheckpoint;
             GameEvents.OnShardCollected -= OnShard;
+            SunSwitch.Art.Shard.Collected -= OnShardDirect;
             GameEvents.OnSummitReached -= OnSummit;
             GameEvents.OnGameStateChanged -= OnState;
             if (_world != null)
@@ -92,7 +94,9 @@ namespace SunSwitch.LookAndFeel
         void OnBlocked() => Play(SfxId.SwitchBlocked);
         void OnDied(DeathCause _) => Play(SfxId.Death);
         void OnCheckpoint(Player.Checkpoint _) => Play(SfxId.Checkpoint);
-        void OnShard(int _, int __) => Play(SfxId.Shard);
+        int _lastShardFrame = -1;
+        void OnShard(int _, int __) { if (Time.frameCount == _lastShardFrame) return; _lastShardFrame = Time.frameCount; Play(SfxId.Shard); }
+        void OnShardDirect(SunSwitch.Art.Shard _) { if (Time.frameCount == _lastShardFrame) return; _lastShardFrame = Time.frameCount; Play(SfxId.Shard); }
         void OnSummit() => Play(SfxId.Win);
         void OnState(GameState s) { if (s == GameState.GameOver) Play(SfxId.GameOver); }
 

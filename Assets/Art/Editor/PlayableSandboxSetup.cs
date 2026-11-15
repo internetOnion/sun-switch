@@ -47,6 +47,8 @@ namespace SunSwitch.Art.EditorTools
             if (player == null) return;
             SetUpCamera(scene, player);
             SetUpManagers(scene);
+            AudioSetup.SetUpAudio(scene);
+            AudioSetup.SetUpPlayerAudio(scene);
 
             EditorSceneManager.MarkSceneDirty(scene);
             Debug.Log("[Sun Switch] Sandbox is playable: WASD / mouse to move, Space to jump, Right Mouse to switch, T to force a switch.");
