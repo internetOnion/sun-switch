@@ -30,6 +30,7 @@ namespace SunSwitch.Art
         static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
 
         Transform owner;
+        SunSwitch.Player.PlayerDeath death;
         MeshRenderer spot;
         MaterialPropertyBlock block;
 
@@ -41,6 +42,7 @@ namespace SunSwitch.Art
         void Awake()
         {
             owner = transform.parent != null ? transform.parent : transform;
+            death = owner.GetComponent<SunSwitch.Player.PlayerDeath>();
             spot = GetComponent<MeshRenderer>();
             spot.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             spot.receiveShadows = false;
@@ -51,7 +53,7 @@ namespace SunSwitch.Art
         {
             // Start a little above the feet so a spot still shows when standing on a slope or step.
             var from = owner.position + Vector3.up * 0.3f;
-            if (!Physics.Raycast(from, Vector3.down, out var hit, maxDrop + 0.3f, ground, QueryTriggerInteraction.Ignore)
+            if ((death != null && death.IsDying) || !Physics.Raycast(from, Vector3.down, out var hit, maxDrop + 0.3f, ground, QueryTriggerInteraction.Ignore)
                 || hit.transform.IsChildOf(owner))
             {
                 spot.enabled = false;
