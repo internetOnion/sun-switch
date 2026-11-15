@@ -49,7 +49,9 @@ To run the project, open it in Unity 6000.3.8f1, open `Assets/Scenes/Main.unity`
 
 ## Contribution
 
-1. Create a new branch off `main` for each feature or fix.
-2. Keep scene changes small. Shared obstacles are prefabs, so tune them there.
-3. Commit every imported asset together with its `.meta` file, and add its source and licence to `CREDITS.md`.
-4. Check that `Main.unity` still plays from start to finish, then open a pull request into `main`.
+| Member | Part |
+|---|---|
+| Nou Reaksmey | Prefabs |
+| Leu Leaphour | Scripts |
+| Chum Kimhak | Sound and level design |
+| Rith Sereyrathanak | UI and settings |
