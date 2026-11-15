@@ -120,6 +120,13 @@ Shader "SunSwitch/Storybook"
             #pragma multi_compile_fog
             #pragma multi_compile_instancing
 
+            // WebGL (GLES3) rejects the draw when the additional-light shadow map is a shadow sampler
+            // without a depth-compare texture bound, which the web build has none of. This shader only
+            // uses the lights for painted pools of light, so skip their shadows there.
+            #if defined(SHADER_API_GLES3)
+                #undef _ADDITIONAL_LIGHT_SHADOWS
+            #endif
+
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 
             struct Attributes
