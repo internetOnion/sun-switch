@@ -197,9 +197,10 @@ namespace SunSwitch.UI
             var screen = new ScreenBinding { id = id, root = root, group = root.gameObject.AddComponent<CanvasGroup>() };
             screens.Add(screen); return screen;
         }
-        void Backdrop(Transform parent, bool? victory = null)
+        void Backdrop(Transform parent, bool? victory = null, bool dayNight = false)
         {
             var sky = Art("Paper sky", parent, StorybookGraphic.Motif.Sky, Vector2.zero, Vector2.zero);
+            sky.dayNightSplit = dayNight;
             if (victory.HasValue)
             {
                 sky.skyBottom = StorybookGraphic.Hex(victory.Value ? "F1E5CA" : "B6CCE8");
@@ -207,22 +208,25 @@ namespace SunSwitch.UI
             }
             Stretch(sky.rectTransform);
             var frame = Art("Corner rules", parent, StorybookGraphic.Motif.Frame, Vector2.zero, Vector2.zero); Stretch(frame.rectTransform);
+            if (dayNight) frame.gameObject.AddComponent<SplitTint>();
             var clouds = Art("Cloud banks", parent, StorybookGraphic.Motif.Clouds, Vector2.zero, new Vector2(0, 340)).rectTransform;
             clouds.anchorMin = Vector2.zero; clouds.anchorMax = new Vector2(1, 0); clouds.anchoredPosition = new Vector2(0, 90);
         }
         void BuildStart()
         {
-            var screen = Screen(MenuScreen.Start); Backdrop(screen.root);
+            // Day on the left, night on the right: ink text turns cream where it crosses into the night.
+            var screen = Screen(MenuScreen.Start); Backdrop(screen.root, null, true);
             var home = Rect("Centered start layout", screen.root, Vector2.zero, new Vector2(800, 960));
-            Label("Eyebrow", home, "A LIGHTKEEPER'S JOURNEY", 18, new Vector2(0, 420), new Vector2(700, 32));
-            Art("Sun and moon crest", home, StorybookGraphic.Motif.Crest, new Vector2(0, 308), new Vector2(300, 180));
-            Label("Title", home, "SUN SWITCH", 80, new Vector2(0, 175), new Vector2(780, 105)).fontStyle = FontStyle.Bold;
-            Label("Subtitle", home, "—   BETWEEN DAY & NIGHT   —", 18, new Vector2(0, 105), new Vector2(700, 32));
+            Label("Eyebrow", home, "A LIGHTKEEPER'S JOURNEY", 18, new Vector2(0, 420), new Vector2(700, 32)).gameObject.AddComponent<SplitTint>();
+            Art("Sun and moon crest", home, StorybookGraphic.Motif.Crest, new Vector2(0, 308), new Vector2(300, 180)).gameObject.AddComponent<SplitTint>();
+            var title = Label("Title", home, "SUN SWITCH", 80, new Vector2(0, 175), new Vector2(780, 105));
+            title.fontStyle = FontStyle.Bold; title.gameObject.AddComponent<SplitTint>();
+            Label("Subtitle", home, "—   BETWEEN DAY & NIGHT   —", 18, new Vector2(0, 105), new Vector2(700, 32)).gameObject.AddComponent<SplitTint>();
             screen.first = Ribbon(home, "Play", 10, MenuCommandId.Play, true);
             Ribbon(home, "Settings", -78, MenuCommandId.Settings); Ribbon(home, "Controls", -166, MenuCommandId.Controls); Ribbon(home, "Quit", -254, MenuCommandId.Quit);
             Art("Introduction parchment", home, StorybookGraphic.Motif.Parchment, new Vector2(0, -374), new Vector2(770, 110));
             Label("Introduction", home, "The sun and moon have fallen out of sync.\nRestore the cycle.", 26, new Vector2(0, -374), new Vector2(730, 82));
-            Label("Navigation hint", home, "↑ ↓  NAVIGATE     ENTER  SELECT", 16, new Vector2(0, -458), new Vector2(700, 28));
+            Label("Navigation hint", home, "↑ ↓  NAVIGATE     ENTER  SELECT", 16, new Vector2(0, -458), new Vector2(700, 28)).gameObject.AddComponent<SplitTint>();
         }
         RectTransform Card(ScreenBinding screen, string heading, Vector2 size)
         {

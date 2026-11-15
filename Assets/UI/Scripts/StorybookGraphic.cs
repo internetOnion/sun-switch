@@ -11,6 +11,9 @@ namespace SunSwitch.UI
         public enum Motif { Sky, Clouds, Crest, Ribbon, Frame, Parchment, Divider, Mouse, CloudCorner }
         public Motif motif;
         public Color skyBottom = Hex("C6D8DB"), skyTop = Hex("8DBAD8");
+        [Tooltip("Sky only: day on the left half, night on the right half (the Start screen)")]
+        public bool dayNightSplit;
+        public Color nightBottom = Hex("4A5590"), nightTop = Hex("1F2452");
         static readonly Color Ink = Hex("282321");
         static readonly Color Cream = Hex("FFF5DE");
         static readonly Color Gold = Hex("E9B64F");
@@ -24,7 +27,20 @@ namespace SunSwitch.UI
             var r = rectTransform.rect;
             if (motif == Motif.Sky)
             {
-                Quad(new Vector2(r.xMin, r.yMin), new Vector2(r.xMax, r.yMax), skyBottom, skyTop);
+                if (dayNightSplit)
+                {
+                    Quad(new Vector2(r.xMin, r.yMin), new Vector2(r.center.x, r.yMax), skyBottom, skyTop);
+                    Quad(new Vector2(r.center.x, r.yMin), new Vector2(r.xMax, r.yMax), nightBottom, nightTop);
+                    // Night stars, deterministic, kept to the upper sky of the right half.
+                    for (int i = 0; i < 46; i++)
+                    {
+                        float x = r.center.x + Mathf.Repeat(i * 0.7548777f, 1) * r.width * 0.5f;
+                        float y = r.yMin + (0.35f + 0.65f * Mathf.Repeat(i * 0.5698403f, 1)) * r.height;
+                        if (i % 7 == 0) Star(new Vector2(x, y), 5, new Color(Cream.r, Cream.g, Cream.b, 0.9f));
+                        else Disc(new Vector2(x, y), 1.4f, new Color(Cream.r, Cream.g, Cream.b, 0.75f), 8);
+                    }
+                }
+                else Quad(new Vector2(r.xMin, r.yMin), new Vector2(r.xMax, r.yMax), skyBottom, skyTop);
                 // Quiet, deterministic paper flecks. No per-frame random changes.
                 for (int i = 0; i < 260; i++)
                 {
@@ -66,23 +82,18 @@ namespace SunSwitch.UI
             }
             else if (motif == Motif.Crest)
             {
+                // Sun Switch logo: the sun, with a crescent moon sitting on its top right. No badge
+                // behind it, so the screen's own background shows through.
                 float s = Mathf.Min(r.width / 300, r.height / 180);
+                Vector2 sun = r.center + new Vector2(-10, -8) * s;
+                Disc(sun, 58 * s, Ink);
+                Disc(sun, 54 * s, Gold);
+                Arc(sun, 45 * s, 1.9f, 3.6f, 2.5f * s, Hex("F7D98A"));   // a little shine on the sun
+
+                Vector2 moon = sun + new Vector2(44, 40) * s;
+                Crescent(moon, 42 * s, Mathf.PI * 0.25f, 29 * s, Hex("E6ECF7"), Ink, 3f * s);
+
                 Vector2 center = r.center;
-                for (int i = 0; i < 16; i++)
-                {
-                    float a = i * Mathf.PI * 2 / 16;
-                    Vector2 d = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
-                    Vector2 tip = center + d * (i % 2 == 0 ? 86 : 79) * s;
-                    Vector2 tangent = new Vector2(-d.y, d.x) * 4 * s;
-                    Polygon(new[] { center + d * 68 * s - tangent, tip, center + d * 68 * s + tangent }, Ink);
-                }
-                Disc(center, 62 * s, Ink);
-                Disc(center, 59 * s, Gold);
-                Disc(center + new Vector2(22, 2) * s, 48 * s, Ink);
-                Disc(center + new Vector2(24, 3) * s, 45 * s, Hex("424A78"));
-                Arc(center + new Vector2(24, 3) * s, 41 * s, 2.1f, 4.9f, 2 * s, Hex("B6CCE8"));
-                Disc(center + new Vector2(42, 17) * s, 40 * s, Gold);
-                Arc(center, 53 * s, 1.7f, 4.2f, 1.2f * s, Hex("FFF5DE"));
                 Star(center + new Vector2(-124, 9) * s, 8 * s, Ink);
                 Star(center + new Vector2(122, -12) * s, 6 * s, Ink);
                 Line(center + new Vector2(-105, 0) * s, center + new Vector2(-90, 0) * s, s, Ink);
@@ -172,6 +183,41 @@ namespace SunSwitch.UI
                 float a = i * Mathf.PI * 2 / count;
                 mesh.AddVert(p + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * radius, c, Vector2.zero);
                 if (i > 0) mesh.AddTriangle(n, n + i, n + i + 1);
+            }
+        }
+        // A pie slice from angle "from" to "to" (radians, counter-clockwise).
+        void Fan(Vector2 p, float radius, float from, float to, Color c, int count = 32)
+        {
+            int n = mesh.currentVertCount;
+            mesh.AddVert(p, c, Vector2.zero);
+            for (int i = 0; i <= count; i++)
+            {
+                float a = Mathf.Lerp(from, to, i / (float)count);
+                mesh.AddVert(p + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * radius, c, Vector2.zero);
+                if (i > 0) mesh.AddTriangle(n, n + i, n + i + 1);
+            }
+        }
+        // A crescent: the circle (p, radius) minus the same-size circle moved by "cut" toward "toward"
+        // (radians). Built as a strip between the outer and inner arcs, with an inked edge.
+        void Crescent(Vector2 p, float radius, float toward, float cut, Color fill, Color ink, float inkWidth, int count = 40)
+        {
+            float phi = Mathf.Acos(Mathf.Clamp(cut / (2 * radius), -1, 1));
+            Vector2 cutCenter = p + new Vector2(Mathf.Cos(toward), Mathf.Sin(toward)) * cut;
+            Vector2 Outer(float t) { float a = toward + phi + t * (Mathf.PI * 2 - 2 * phi); return p + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * radius; }
+            Vector2 Inner(float t) { float a = toward + Mathf.PI - phi + t * 2 * phi; return cutCenter + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * radius; }
+            for (int i = 0; i < count; i++)
+            {
+                float t0 = i / (float)count, t1 = (i + 1) / (float)count;
+                int n = mesh.currentVertCount;
+                mesh.AddVert(Outer(t0), fill, Vector2.zero); mesh.AddVert(Outer(t1), fill, Vector2.zero);
+                mesh.AddVert(Inner(t1), fill, Vector2.zero); mesh.AddVert(Inner(t0), fill, Vector2.zero);
+                mesh.AddTriangle(n, n + 1, n + 2); mesh.AddTriangle(n, n + 2, n + 3);
+            }
+            for (int i = 0; i < count; i++)
+            {
+                float t0 = i / (float)count, t1 = (i + 1) / (float)count;
+                Line(Outer(t0), Outer(t1), inkWidth, ink);
+                Line(Inner(t0), Inner(t1), inkWidth, ink);
             }
         }
         void Line(Vector2 a, Vector2 b, float width, Color c)

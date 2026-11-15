@@ -12,6 +12,11 @@ Select their RectTransforms, live Text labels, ribbons, sliders and artwork to
 edit them in the Inspector. Toggle screen objects in edit mode to inspect them.
 Play mode starts on Start and the view manages visibility and input.
 
+The Start screen's sky is split, day on the left and night on the right
+(`StorybookGraphic.dayNightSplit`). Ink text and outlines that cross the centre
+line carry a `SplitTint`, which draws their night-side part in cream, cut exactly
+at the line. The logo is the sun with a crescent moon on its top right.
+
 The Canvas uses 1920 × 1080 with Expand scaling. Decorative graphics do not
 intercept input. Palette, irregular parchment, quiet grain, outlined cloud banks,
 celestial crest and torn ribbons follow `Docs/UI_ART_STYLE.md`. Typography uses
