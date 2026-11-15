@@ -170,7 +170,7 @@ namespace SunSwitch.Art.EditorTools
         {
             Checkpoint(s, 72, 17, 13, 270);                                 // CP4, inside the zone
             Hint(s, "Auto-cycle", new Vector3(71.5f, 18.5f, 13), new Vector3(6, 4, 6),
-                "Here the world flips by itself. Watch the ring and time your jumps.");
+                "Here the world flips by itself. Wait on safe ground, and jump when the platforms blink.");
             var zone = new GameObject("AutoCycleZone");
             zone.transform.SetParent(s.transform, false);
             zone.transform.position = new Vector3(55.5f, 22.5f, 22.25f);
@@ -178,22 +178,25 @@ namespace SunSwitch.Art.EditorTools
             box.isTrigger = true;
             box.size = new Vector3(37, 15, 26.5f);                          // x 37-74, z 9-35.5
             zone.AddComponent<AutoCycleZone>();
+            zone.AddComponent<PhaseFlipCue>();                              // platforms blink before each flip
 
+            // The flip only lands you safely if you take off just before it, so every phased hop
+            // starts or ends on a Both platform where you can stand and catch the beat. Only two
+            // hops go phased-to-phased (Night 18.5 > Day 23, Night 30 > Day 33.5), each after a rest.
             P(s, "Platforms/Platform_Wide_Both", 65.5f, 17, 13);
             P(s, "Platforms/Platform_Medium_Day", 59, 17, 13);
-            P(s, "Obstacles/Shard_Night", 56.25f, 18.6f, 13);               // #10 flip in the air
-            P(s, "Platforms/Platform_Medium_Night", 53.5f, 17, 13);
-            P(s, "Platforms/Platform_Medium_Day", 48, 17, 13);
-            P(s, "Platforms/Platform_Wide_Both", 41.5f, 17, 13);
+            P(s, "Obstacles/Shard_Night", 56, 18.6f, 13);                   // #10 leave the Day platform late, flip in the air
+            P(s, "Platforms/Platform_Medium_Both", 53, 17, 13);             // rest
+            P(s, "Platforms/Platform_Medium_Night", 47.5f, 17, 13);
+            P(s, "Platforms/Platform_Wide_Both", 41.5f, 17, 13);            // rest
             P(s, "Obstacles/JumpPad_Day", 41.5f, 17, 13);
             P(s, "Obstacles/Shard_Night", 41.5f, 23.5f, 16);                // #11
             P(s, "Platforms/Platform_Medium_Night", 41.5f, 22, 18.5f);
             P(s, "Platforms/Platform_Small_Day", 41.5f, 22.75f, 23);        // the stair
-            P(s, "Platforms/Platform_Small_Night", 41.5f, 23.5f, 26.5f);
-            P(s, "Platforms/Platform_Small_Day", 41.5f, 24.25f, 30);
-            P(s, "Platforms/Platform_Small_Night", 41.5f, 25, 33.5f);
-            // Side step is Both: out and back can't both fit in one 2 s Day, so you wait out a beat here.
-            P(s, "Platforms/Platform_Small_Both", 45, 24.25f, 30);
+            P(s, "Platforms/Platform_Small_Both", 41.5f, 23.5f, 26.5f);     // rest
+            P(s, "Platforms/Platform_Small_Night", 41.5f, 24.25f, 30);
+            P(s, "Platforms/Platform_Small_Day", 41.5f, 25, 33.5f);
+            P(s, "Platforms/Platform_Small_Both", 45, 24.25f, 30);          // side step, also a rest
             P(s, "Obstacles/Shard_Day", 45, 25.45f, 30);                    // #12
             P(s, "Platforms/Platform_Wide_Both", 41.5f, 25, 39);
             P(s, "Obstacles/SummitGoal", 41.5f, 25, 40);
