@@ -15,7 +15,9 @@ namespace SunSwitch.Art.EditorTools
     ///   HUD                 Canvas (overlay, under the menu) + CanvasGroup + HUDController
     ///   ├─ Lives            parchment plate, three lantern flames (lost ones grey out)
     ///   ├─ Run              parchment plate: PhaseCooldownIcon (ring + sun / moon) and the timer
-    ///   └─ Shards           parchment plate: crystal icon and "x/12"
+    ///   ├─ Shards           parchment plate: crystal icon and "x/12"
+    ///   ├─ Checkpoint Notice  "Checkpoint" under the timer for a moment (CheckpointNotice)
+    ///   └─ Hint             bottom strip: the instruction for the HintZone the player is in (HintPanel)
     ///
     /// The icons are small sprites baked here into Assets/Art/UI (ink outline, white fill, tinted
     /// by the Image colour). Safe to run again: sprites and prefab are rebuilt in place.
@@ -106,6 +108,25 @@ namespace SunSwitch.Art.EditorTools
             crystal.color = Hex("F0C463");
             var count = Label(shards, "Count", font, "0/12", 42, new Vector2(38, 2), new Vector2(150, 60));
             count.fontStyle = FontStyle.Bold;
+
+            // Checkpoint notice: under the timer, shown for a moment when a checkpoint is reached.
+            var notice = Plate(root.transform, "Checkpoint Notice", new Vector2(0.5f, 1), new Vector2(0, -170), new Vector2(330, 84));
+            var noticeIcon = Icon(notice, "Lamp Icon", flame, new Vector2(-104, 0), new Vector2(44, 44));
+            noticeIcon.color = Gold;
+            var noticeText = Label(notice, "Text", font, "Checkpoint", 34, new Vector2(24, 2), new Vector2(220, 50));
+            noticeText.fontStyle = FontStyle.Bold;
+            notice.gameObject.AddComponent<CanvasGroup>().alpha = 0f;
+            notice.gameObject.AddComponent<SunSwitch.Art.CheckpointNotice>();
+
+            // Hint: bottom centre, the instruction for where the player is (HintZone) or a blocked switch.
+            var hint = Plate(root.transform, "Hint", new Vector2(0.5f, 0), new Vector2(0, 48), new Vector2(1100, 96));
+            var hintText = Label(hint, "Text", font, "", 32, new Vector2(0, 2), new Vector2(1030, 84));
+            hintText.supportRichText = true;
+            hintText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            hintText.lineSpacing = 0.9f;
+            hint.gameObject.AddComponent<CanvasGroup>().alpha = 0f;
+            var hintPanel = hint.gameObject.AddComponent<SunSwitch.Art.HintPanel>();
+            Set(hintPanel, "text", hintText);
 
             var hud = root.AddComponent<SunSwitch.UI.HUDController>();
             var so = new SerializedObject(hud);

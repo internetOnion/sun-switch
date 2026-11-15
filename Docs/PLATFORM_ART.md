@@ -19,7 +19,7 @@ Owner: platforms, platform prefabs, phase materials, character visual.
 | `Assets/Art/Characters/Lightkeeper/` | Character art | Lightkeeper model (KayKit), lantern, animator controller |
 | `Assets/Art/Materials/Character/` | Character art | `M_Lightkeeper`, `M_LanternGlow` |
 | `Assets/Art/Materials/Sky/` | Look & feel | `M_StorybookSky` |
-| `Assets/Art/Scripts/` | Character art, look & feel | `LanternGlow`, `DayNightLook`, `DayNightDebugToggle`, `Shard` (runtime). Obstacle and phase behaviour lives in `Assets/Scripts` (gameplay). |
+| `Assets/Art/Scripts/` | Character art, look & feel | `LanternGlow`, `DayNightLook`, `DayNightDebugToggle`, `Shard`, `CheckpointLamp`, `CheckpointNotice`, `HintZone`, `HintPanel` (runtime). Obstacle and phase behaviour lives in `Assets/Scripts` (gameplay). |
 | `Assets/Prefabs/Characters/` | Character art | `Lightkeeper.prefab` |
 | `Assets/Scenes/Sandbox/Platforms_Sandbox.unity` | Platform art | Preview / test scene, not in Build Settings |
 | `Assets/Scenes/Sandbox/Level_Greybox.unity` | Look & feel | The whole level plan grey-boxed and playable, not in Build Settings |
@@ -53,14 +53,28 @@ Platform_Medium_Day      root — BoxCollider + PhaseObject, never scaled
 **Checkpoint** (`Assets/Prefabs/Platforms/Base/Checkpoint.prefab`, placed directly):
 
 ```
-Checkpoint     Both platform, BoxCollider
+Checkpoint     Both platform, BoxCollider, CheckpointLamp
 ├─ Beacon      cream pole
-├─ Lit         gold glow cap + point light; off until the checkpoint is reached
+├─ Lamp        the lamp on top of the pole (always there; CheckpointLamp drives its glow)
+├─ Lit         point light; off until the checkpoint is reached
+├─ Flare/Beam  column of light for the reached burst (saved off)
+├─ Ring        ring that rolls across the platform in the burst (saved off)
 ├─ Spawn       where the player respawns (platform centre, facing +z); move or turn per instance
 └─ Trigger     trigger box above the platform + Checkpoint (Spawn Point = Spawn, Active Indicator = Lit)
 ```
 
 Tick *Is Start* on `Trigger`'s `Checkpoint` for the very first one in Section 1.
+
+**The lamp tells the player where they stand** (`CheckpointLamp`, art-side; it only reads the gameplay scripts):
+
+| State | Looks like |
+| --- | --- |
+| Not reached yet | A faint ember that pulses slowly, so a checkpoint ahead is visible as "a lamp to light" |
+| Reached | About 1 s: the light flashes, the lamp pops, a beam shoots 7 m up, a ring rolls across the platform and sparks rise. The HUD shows "Checkpoint" under the timer (`CheckpointNotice`). Not shown for the start checkpoint |
+| Current (the respawn point) | Bright, breathing gently, lighting the platform |
+| Reached earlier | Still lit, but dimmer, so the current one stands out |
+
+The colour follows the phase like the Lightkeeper's lantern: gold by Day, blue by Night. Reaching an older checkpoint again makes it current and plays the burst again. Tuning (brightness per state, burst length, beam height, ring size, spark count) is on `CheckpointLamp`. `Update Platform Prefabs` recreates it with the script's defaults.
 
 ## Colour code
 
@@ -151,12 +165,24 @@ This is a test rig, not the game's player: the player prefab, follow camera and 
 
 ## Level grey-box
 
-`Sun Switch > Art > Build Level Grey-box` places the Sun Switch Level Plan into `Assets/Scenes/Sandbox/Level_Greybox.unity`: the four sections around the tower, 12 shards, 6 checkpoints, a kill plane per section, the Summit `AutoCycleZone` and the `SummitGoal`. It adds the same player, camera, managers, menu and HUD as the playable sandbox, with the player on CP1. Safe to run again: the section roots are rebuilt and the rest is reused.
+`Sun Switch > Art > Build Level Grey-box` places the Sun Switch Level Plan into `Assets/Scenes/Sandbox/Level_Greybox.unity`: the four sections around the tower, 12 shards, 6 checkpoints, a kill plane per section, the Summit `AutoCycleZone`, the `SummitGoal` and the instruction hints. It adds the same player, camera, managers, menu and HUD as the playable sandbox, with the player on CP1. Safe to run again: the section roots are rebuilt and the rest is reused.
 
 - **One root per section** (`Section 1 - Mossy Base` … `Section 4 - Summit`), so each owner can copy theirs into `SectionN.unity` once those scenes exist. World positions are already final, so pasting keeps them.
 - **The positions live in `LevelGreyboxBuilder.cs`**, one line per prefab with a comment on what it's for. Change a beat there, rebuild, and keep the plan in step.
 - **Handoffs:** the corner checkpoints (CP2, CP3, CP4) are where sections meet. Move beats inside a section freely, but keep those fixed.
 - **Checked:** a route bot played the whole grey-box in a player build with the real controls: every hop, all 12 shards, each checkpoint's respawn and facing, the kill planes and the win. 90/90 checks, four runs in a row.
+- **Instructions:** six `HintZone` boxes (`Hint - …` under each section root) show a line at the bottom of the HUD while the player stands in them. Words in [brackets] are drawn as keys.
+
+  | Hint | Where | Says |
+  |---|---|---|
+  | Controls | CP1 | [WASD] move, [Space] jump, [Shift] sprint, [Mouse] look around |
+  | Switch | end of the first Day platform and the switch station | [Right Mouse] switch Day / Night. Some platforms only exist at Night. |
+  | Ghost | the Day platform before the ghost wall | A Day wall is only a ghost at Night. Switch, then walk through it. |
+  | Mid-air Switch | CP2 and the next platform | Switch in mid-air: jump first, then [Right Mouse] before you land. |
+  | Phased Hazards | CP3b, before the kill bars | Hazards follow the phase too: a Day bar is only a ghost at Night. |
+  | Auto-cycle | CP4 | Here the world flips by itself. Watch the ring and time your jumps. |
+
+  A hint is done once the player walks out of its box alive, and doesn't come back. Falling out of the bottom or dying doesn't count, so the lesson is still there after the respawn. Edit the text and boxes in `LevelGreyboxBuilder.cs`; select a hint to see its box as a gold gizmo.
 - **Kill bars:** each arm reaches about 3 m from the post. On a 6 × 6 m platform, only the corners are outside that reach, so aim landings at a corner. Crossing behind an arm, moving the same way it does, is the easy line.
 
 ## HUD
@@ -166,6 +192,8 @@ This is a test rig, not the game's player: the player prefab, follow camera and 
 - **Lives** (top left): three lantern flames. A lost one greys out and bounces.
 - **Run** (top centre): `PhaseCooldownIcon` (sun or moon inside a gold ring that refills over the switch cooldown, shakes red when a switch is blocked) and the run timer. The line under the timer is a `PhaseThemedGraphic`: gold by Day, blue by Night.
 - **Shards** (top right): crystal and `x/total`.
+- **Checkpoint notice** (under the timer): "Checkpoint" with a lamp flame, for about 2 s when a new checkpoint is reached (`CheckpointNotice`).
+- **Hint** (bottom centre): a parchment strip with the instruction for the `HintZone` the player is in. When a switch is blocked by a ghost, it says "Can't switch while inside a ghost. Step out of it first." for 2.5 s (`HintPanel`). Cross-fades between messages.
 - `HUDController` on the root (with a `CanvasGroup`) shows it while playing or paused. The canvas is an overlay with sort order −10, so the menu draws over it.
 - Icons are baked sprites in `Assets/Art/UI` (ink outline and white fill), tinted by the Image colour. The text uses Unity's built-in font, like the menu, until the licensed display font arrives.
 
