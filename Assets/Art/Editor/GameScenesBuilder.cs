@@ -23,8 +23,8 @@ namespace SunSwitch.Art.EditorTools
     /// and puts Main first in Build Settings with the four sections after it.
     ///
     /// Safe to run again. Main gets missing pieces added and keeps the rest. A section scene that
-    /// already exists is never touched, because it belongs to its section owner once made; delete
-    /// it first to make it again from LevelGreyboxBuilder.
+    /// already exists is never touched, because it belongs to its section owner once made; use
+    /// Sun Switch > Rebuild Section Scene to replace one with the LevelGreyboxBuilder layout.
     /// </summary>
     public static class GameScenesBuilder
     {
@@ -54,6 +54,33 @@ namespace SunSwitch.Art.EditorTools
             SetBuildScenes();
             Debug.Log("[Sun Switch] Game scenes ready: Main + Section1-4 in Build Settings" +
                       (made.Count > 0 ? $" (made {string.Join(", ", made)})." : " (sections kept as they were)."));
+        }
+
+        [MenuItem("Sun Switch/Rebuild Section Scene/Section 1")] static void Rebuild1() => RebuildSection(0, true);
+        [MenuItem("Sun Switch/Rebuild Section Scene/Section 2")] static void Rebuild2() => RebuildSection(1, true);
+        [MenuItem("Sun Switch/Rebuild Section Scene/Section 3")] static void Rebuild3() => RebuildSection(2, true);
+        [MenuItem("Sun Switch/Rebuild Section Scene/Section 4")] static void Rebuild4() => RebuildSection(3, true);
+
+        /// <summary>
+        /// Replaces everything in SectionN.unity with the LevelGreyboxBuilder layout, keeping the
+        /// scene asset (and its Build Settings entry). Hand edits in that scene are lost, so the
+        /// menu asks first.
+        /// </summary>
+        public static void RebuildSection(int index, bool ask)
+        {
+            string path = SectionPath(index);
+            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(path) == null) { Build(); return; }
+            if (ask && !EditorUtility.DisplayDialog($"Rebuild {SectionScene(index)}",
+                    $"Replace everything in {path} with the layout in LevelGreyboxBuilder.cs? Changes made by hand in that scene are lost.",
+                    "Rebuild", "Cancel"))
+                return;
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+
+            var scene = EditorSceneManager.OpenScene(path, OpenSceneMode.Single);
+            foreach (var root in scene.GetRootGameObjects()) Object.DestroyImmediate(root);
+            LevelGreyboxBuilder.BuildSection(index, new GameObject(LevelGreyboxBuilder.SectionNames[index]));
+            EditorSceneManager.SaveScene(scene);
+            Debug.Log($"[Sun Switch] Rebuilt {path} from the grey-box layout.");
         }
 
         static bool BuildMain()

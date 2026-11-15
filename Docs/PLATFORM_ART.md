@@ -19,7 +19,7 @@ Owner: platforms, platform prefabs, phase materials, character visual.
 | `Assets/Art/Characters/Lightkeeper/` | Character art | Lightkeeper model (KayKit), lantern, animator controller |
 | `Assets/Art/Materials/Character/` | Character art | `M_Lightkeeper`, `M_LanternGlow` |
 | `Assets/Art/Materials/Sky/` | Look & feel | `M_StorybookSky` |
-| `Assets/Art/Scripts/` | Character art, look & feel | `LanternGlow`, `DayNightLook`, `DayNightDebugToggle`, `Shard`, `CheckpointLamp`, `CheckpointNotice`, `HintZone`, `HintPanel` (runtime). Obstacle and phase behaviour lives in `Assets/Scripts` (gameplay). |
+| `Assets/Art/Scripts/` | Character art, look & feel | `LanternGlow`, `DayNightLook`, `DayNightDebugToggle`, `Shard`, `CheckpointLamp`, `CheckpointNotice`, `HintZone`, `HintPanel`, `PhaseFlipCue` (runtime). Obstacle and phase behaviour lives in `Assets/Scripts` (gameplay). |
 | `Assets/Prefabs/Characters/` | Character art | `Lightkeeper.prefab` |
 | `Assets/Scenes/Sandbox/Platforms_Sandbox.unity` | Platform art | Preview / test scene, not in Build Settings |
 | `Assets/Scenes/Sandbox/Level_Greybox.unity` | Look & feel | The whole level plan grey-boxed and playable, not in Build Settings |
@@ -180,9 +180,11 @@ This is a test rig, not the game's player: the player prefab, follow camera and 
   | Ghost | the Day platform before the ghost wall | A Day wall is only a ghost at Night. Switch, then walk through it. |
   | Mid-air Switch | CP2 and the next platform | Switch in mid-air: jump first, then [Right Mouse] before you land. |
   | Phased Hazards | CP3b, before the kill bars | Hazards follow the phase too: a Day bar is only a ghost at Night. |
-  | Auto-cycle | CP4 | Here the world flips by itself. Watch the ring and time your jumps. |
+  | Auto-cycle | CP4 | Here the world flips by itself. Wait on safe ground, and jump when the platforms blink. |
 
   A hint is done once the player walks out of its box alive, and doesn't come back. Falling out of the bottom or dying doesn't count, so the lesson is still there after the respawn. Edit the text and boxes in `LevelGreyboxBuilder.cs`; select a hint to see its box as a gold gizmo.
+- **Summit rhythm (Section 4):** in the auto-cycle, a hop onto a platform that isn't there yet only works if you take off just before the flip and land just after it, a window of about 0.5-0.7 s. So every phased platform there sits next to a Both platform where the player can stand, watch a flip or two and catch the beat. Only two hops go straight from one phased platform to another (Night 18.5 > Day 23 and Night 30 > Day 33.5 on the stair), and each comes right after a rest.
+- **Flip warning:** `PhaseFlipCue` on the `AutoCycleZone` shows each flip coming for the last 0.6 s: platforms about to vanish blink faster and faster, ghosts of platforms about to appear fill in, and the Lightkeeper's lantern pulses on the same beat. "It's blinking" means "jump now". It only uses property blocks and drops them at the flip, so `PhaseObject` keeps control of materials and colliders.
 - **Kill bars:** each arm reaches about 3 m from the post. On a 6 × 6 m platform, only the corners are outside that reach, so aim landings at a corner. Crossing behind an arm, moving the same way it does, is the easy line.
 
 ## Game scenes
@@ -196,8 +198,8 @@ This is a test rig, not the game's player: the player prefab, follow camera and 
 
 - **How it runs:** Build Settings lists `Main` first, then `Section1` to `Section4`. Press Play in `Main`; `SectionLoader` loads the four sections into it (about 0.1 s) and `GameManager` waits for them before showing the Start screen. `Main` stays the active scene, so its lighting and fog are the ones you see.
 - **Editing a section:** open `Main`, then drag `SectionN` into the Hierarchy to open it alongside. Play still works: sections that are already open aren't loaded twice.
-- **Owners:** `Main` is P1's; `Section1` P3, `Section2` P2, `Section3` P1, `Section4` P4 (GDD). Once a section scene exists, running the builder again never touches it, so owners can replace the grey-box pieces freely. Delete a section scene to make it again from `LevelGreyboxBuilder.cs`. `Main` gets missing pieces added and keeps the rest.
-- **Sandboxes stay test scenes:** `Platforms_Sandbox` and `Level_Greybox` keep the T-key debug switch and aren't in Build Settings. `StartGame.unity` and `Assets/UI/Scenes/MenuPreview.unity` are the menu team's preview scenes. `SampleScene` stays listed but switched off.
+- **Owners:** `Main` is P1's; `Section1` P3, `Section2` P2, `Section3` P1, `Section4` P4 (GDD). Once a section scene exists, running the builder again never touches it, so owners can replace the grey-box pieces freely. To replace one with the layout in `LevelGreyboxBuilder.cs`, use `Sun Switch > Rebuild Section Scene > Section N` (it asks first, and keeps the scene asset and its Build Settings entry). `Main` gets missing pieces added and keeps the rest.
+- **Sandboxes stay test scenes:** `Platforms_Sandbox` and `Level_Greybox` keep the T-key debug switch and aren't in Build Settings. `StartGame.unity` and `Assets/UI/Scenes/MenuPreview.unity` are the menu team's preview scenes.
 - **Checked:** a development player build of the five scenes loads them all, keeps one `WorldPhase` and one `DayNightLook`, counts 6 checkpoints, 12 shards and 6 hints, starts on CP1 from the Start screen, respawns at a checkpoint in another section, and wins at the `SummitGoal` in `Section4`.
 
 ## HUD

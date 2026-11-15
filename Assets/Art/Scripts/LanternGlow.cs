@@ -7,6 +7,7 @@ namespace SunSwitch.Art
     /// ground around the player a little (helps reading ghost platforms at night).
     ///
     /// Follows DayNightLook automatically (its Changed event); SetDay(bool) also works on its own.
+    /// In an auto-cycle zone it pulses brighter on PhaseFlipCue's beat just before each flip.
     /// The colour cross-fades over the same 0.25 s as the world lighting (GDD §2).
     /// Toggle "Is Day" in the Inspector to preview.
     /// </summary>
@@ -25,7 +26,10 @@ namespace SunSwitch.Art
         static readonly int EmissionId = Shader.PropertyToID("_EmissionColor");
         static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
 
+        [SerializeField, Tooltip("Extra brightness at the peak of a flip-warning pulse")] float flipPulse = 1.2f;
+
         MaterialPropertyBlock block;
+        bool pulsing;
         Color current;
         Color from;
         float fadeT = 1f;
@@ -78,19 +82,32 @@ namespace SunSwitch.Art
 
         void Update()
         {
-            if (fadeT >= 1f) return;
-            fadeT = Mathf.Min(1f, fadeT + Time.deltaTime / fadeSeconds);
-            Apply(Color.Lerp(from, Target, Mathf.SmoothStep(0f, 1f, fadeT)));
+            float pulse = Application.isPlaying ? PhaseFlipCue.Warning * PhaseFlipCue.Blink : 0f;
+            bool fading = fadeT < 1f;
+            if (!fading && pulse <= 0f && !pulsing) return;
+            if (fading)
+            {
+                fadeT = Mathf.Min(1f, fadeT + Time.deltaTime / fadeSeconds);
+                current = Color.Lerp(from, Target, Mathf.SmoothStep(0f, 1f, fadeT));
+            }
+            pulsing = pulse > 0f;
+            Draw(current, 1f + flipPulse * pulse);
         }
 
         void Apply(Color glow)
         {
             current = glow;
+            Draw(glow, 1f);
+        }
+
+        // boost brightens the glow and the light without changing the phase colour.
+        void Draw(Color glow, float boost)
+        {
             if (glass != null)
             {
                 block ??= new MaterialPropertyBlock();
                 glass.GetPropertyBlock(block);
-                block.SetColor(EmissionId, glow);
+                block.SetColor(EmissionId, glow * boost);
                 // Tint the glass itself too, so it reads as coloured light even in shadow.
                 float max = Mathf.Max(glow.r, Mathf.Max(glow.g, glow.b), 0.001f);
                 block.SetColor(BaseColorId, new Color(glow.r / max, glow.g / max, glow.b / max, 1f));
@@ -100,7 +117,7 @@ namespace SunSwitch.Art
             {
                 float max = Mathf.Max(glow.r, Mathf.Max(glow.g, glow.b), 0.001f);
                 glowLight.color = new Color(glow.r / max, glow.g / max, glow.b / max);
-                glowLight.intensity = lightIntensity;
+                glowLight.intensity = lightIntensity * boost;
             }
         }
     }
