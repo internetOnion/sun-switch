@@ -12,7 +12,7 @@ namespace SunSwitch.LookAndFeel
         [SerializeField] AudioClip dayLayer;
         [SerializeField] AudioClip nightLayer;
         [SerializeField] AudioClip menuTrack;
-        [SerializeField, Range(0f, 1f)] float volume = 0.6f;
+        [SerializeField, Range(0f, 1f)] float volume = 0.1f;
         [SerializeField, Min(0.01f), Tooltip("Cross-fade time in seconds")] float fadeTime = 0.5f;
         [SerializeField, Tooltip("Tick if the game opens on the Start screen and GameManager doesn't announce Menu")]
         bool startInMenu;
