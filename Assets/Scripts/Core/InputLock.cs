@@ -34,10 +34,21 @@ namespace SunSwitch.Core
 
         static void Apply()
         {
+            ApplyCursor();
+            OnLockChanged?.Invoke(IsLocked);
+        }
+
+        static void ApplyCursor()
+        {
             bool locked = IsLocked;
             Cursor.lockState = locked ? CursorLockMode.None : CursorLockMode.Locked;
             Cursor.visible = locked;
-            OnLockChanged?.Invoke(locked);
+        }
+
+        // Coming back to the window (alt-tab) restores the right cursor for menu or play.
+        static void HandleFocus(bool focused)
+        {
+            if (focused) ApplyCursor();
         }
 
         // Static fields survive between Play sessions when Domain Reload is off, so reset them.
@@ -46,6 +57,8 @@ namespace SunSwitch.Core
         {
             _reasons.Clear();
             OnLockChanged = null;
+            Application.focusChanged -= HandleFocus;
+            Application.focusChanged += HandleFocus;
         }
 
         // Lock the cursor for gameplay once the first scene is loaded.

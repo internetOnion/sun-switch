@@ -53,7 +53,11 @@ Implement `MenuFlowAdapter.Request` in the owning game-flow system and call
 `CompleteRequest` on failure or return to release duplicate-request protection.
 Use `ShowPause`, `ShowStart` and `ShowResults` for confirmed game-flow states.
 A missing adapter shows an unavailable message; settings are disabled without
-the explicit preview fixture. Real settings providers remain an integration task.
+the explicit preview fixture or a settings provider. An adapter provides settings
+by overriding `ProvidesSettings`, `GetSetting`, `SetSetting` and `SaveSettings`
+(rows in screen order: music, SFX, mouse sensitivity). In the game, `GameMenuFlow`
+does this with `GameSettings` (saved on the device, applied by `MusicPlayer`,
+`AudioManager` and `LightkeeperController`), and the Settings card says so.
 The view does not own scene loading, cursor lock, time scale, saves or run state.
 Provide the production EventSystem when integrating the prefab.
 
@@ -71,5 +75,5 @@ restored focus, Cancel-first confirmation, parent input blocking and results
 focus. Verification is performed in an isolated project copy under `.utmp` so
 the user's open project and unrelated shared settings remain untouched.
 
-Gameplay/provider integration, a licensed display font, menu audio and manual
+A licensed display font, menu audio and manual
 mouse/keyboard usability review remain separate handoff work.

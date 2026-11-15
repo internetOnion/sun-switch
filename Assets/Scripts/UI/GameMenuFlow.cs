@@ -7,7 +7,8 @@ namespace SunSwitch.UI
     /// <summary>
     /// Connects the designer's StartMenuView (Start, Pause, Controls, Game Over, Victory screens)
     /// to GameManager. Replaces StartMenuPreview on the MenuRoot prefab: remove that one.
-    /// Covers UIManager, StartMenu, PauseMenu, HowToPlayPanel and EndScreen from the spec.
+    /// Covers UIManager, StartMenu, PauseMenu, HowToPlayPanel and EndScreen from the spec, and is
+    /// the Settings screen's provider (GameSettings).
     /// </summary>
     [RequireComponent(typeof(StartMenuView))]
     public sealed class GameMenuFlow : MenuFlowAdapter
@@ -55,6 +56,19 @@ namespace SunSwitch.UI
             _flipTimer = 0f;
             world.ForceSet(PhaseUtil.Opposite(world.Current));
         }
+
+        // Settings screen: the sliders read and write GameSettings (saved on this device).
+        public override bool ProvidesSettings => true;
+        public override float GetSetting(MenuSetting setting) => GameSettings.Get(ToId(setting));
+        public override void SetSetting(MenuSetting setting, float value) => GameSettings.Set(ToId(setting), value);
+        public override void SaveSettings() => GameSettings.Save();
+
+        static GameSettings.Id ToId(MenuSetting setting) => setting switch
+        {
+            MenuSetting.MusicVolume => GameSettings.Id.MusicVolume,
+            MenuSetting.SfxVolume => GameSettings.Id.SfxVolume,
+            _ => GameSettings.Id.MouseSensitivity,
+        };
 
         public override void RequestStart(StartMenuView view) => Request(MenuIntent.Play, view);
         public override void RequestQuit(StartMenuView view) => Request(MenuIntent.Quit, view);

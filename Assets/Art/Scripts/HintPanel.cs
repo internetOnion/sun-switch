@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using SunSwitch.Core;
+using SunSwitch.GameFlow;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -9,7 +10,8 @@ namespace SunSwitch.Art
     /// HUD parchment strip at the bottom of the screen for instructions:
     ///   - the message of the HintZone the player is standing in (HintZone.Active)
     ///   - "Can't switch while inside a ghost…" for a moment when a switch is blocked
-    /// Cross-fades when the message changes. Words in [brackets] are drawn bold in the key colour.
+    /// Cross-fades when the message changes, and hides outside play (menus, pause, end screens).
+    /// Words in [brackets] are drawn bold in the key colour.
     /// Uses unscaled time, like the checkpoint notice.
     /// </summary>
     [RequireComponent(typeof(CanvasGroup))]
@@ -64,6 +66,9 @@ namespace SunSwitch.Art
             if (blockedLeft > 0f) blockedLeft -= dt;
             var zone = HintZone.Active;
             string wanted = blockedLeft > 0f ? blockedMessage : zone != null ? zone.Message : null;
+            // Only while playing: not under the Start screen, the Pause card or the end screens.
+            var game = GameManager.Instance;
+            if (game != null && game.State != GameState.Playing) wanted = null;
 
             float step = fadeSeconds > 0f ? dt / fadeSeconds : 1f;
             if (wanted != shown)

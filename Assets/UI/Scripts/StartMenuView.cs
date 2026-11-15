@@ -51,7 +51,7 @@ namespace SunSwitch.UI
         void Awake()
         {
             if (canvasRoot == null) BuildCanvas();
-            foreach (var row in settings) row.Configure(IsPreview);
+            ConfigureSettings();
             ShowStart();
         }
         void Start() { Focus(Binding(current).first); }
@@ -67,7 +67,23 @@ namespace SunSwitch.UI
         public void BindFlow(MenuFlowAdapter adapter)
         {
             flow = adapter;
-            if (settings != null) foreach (var row in settings) if (row != null) row.Configure(IsPreview);
+            ConfigureSettings();
+        }
+        // Rows are in screen order: music, SFX, mouse sensitivity (BuildSettings).
+        void ConfigureSettings()
+        {
+            if (settings == null) return;
+            for (int i = 0; i < settings.Length; i++)
+            {
+                if (settings[i] == null) continue;
+                settings[i].Configure(IsPreview);
+                settings[i].Bind(flow, (MenuSetting)i);
+            }
+            if (flow == null || !flow.ProvidesSettings || canvasRoot == null) return;
+            var settingsScreen = Binding(MenuScreen.Settings);
+            if (settingsScreen == null) return;
+            foreach (var label in settingsScreen.root.GetComponentsInChildren<Text>(true))
+                if (label.name == "Provider status") label.text = "Changes apply straight away\nand are saved on this device.";
         }
         ScreenBinding Binding(MenuScreen id) => screens.Find(item => item.id == id);
         static void Focus(Button button) { if (Application.isPlaying && button != null && EventSystem.current != null) button.Select(); }
@@ -98,6 +114,7 @@ namespace SunSwitch.UI
         public void Back()
         {
             if (history.Count == 0) return;
+            if (current == MenuScreen.Settings && flow != null && flow.ProvidesSettings) flow.SaveSettings();
             Binding(current).root.gameObject.SetActive(false);
             var previous = history.Pop(); Activate(previous.screen);
             if (previous.focus != null && EventSystem.current != null) EventSystem.current.SetSelectedGameObject(previous.focus);
