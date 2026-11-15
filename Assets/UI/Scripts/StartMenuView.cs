@@ -123,8 +123,10 @@ namespace SunSwitch.UI
         public void ShowPause() => Replace(MenuScreen.Pause);
         public void ShowResults(bool victory, MenuResults results)
         {
-            var elapsed = TimeSpan.FromSeconds(results.Seconds);
-            (victory ? victoryStats : gameOverStats).text = $"TIME     {(int)elapsed.TotalMinutes:00}:{elapsed.Seconds:00}\nDEATHS     {results.Deaths}\nSHARDS     {results.Shards} / {results.TotalShards}";
+            // Same format as the HUD timer: mm:ss.hh, whole hundredths so 59.996 s never shows 60.00.
+            int hundredths = Mathf.FloorToInt(results.Seconds * 100f);
+            string time = $"{hundredths / 6000:00}:{hundredths / 100 % 60:00}.{hundredths % 100:00}";
+            (victory ? victoryStats : gameOverStats).text = $"TIME     {time}\nDEATHS     {results.Deaths}\nSHARDS     {results.Shards} / {results.TotalShards}";
             Replace(victory ? MenuScreen.Victory : MenuScreen.GameOver);
         }
         public void Execute(MenuCommandId command)
@@ -268,13 +270,13 @@ namespace SunSwitch.UI
         void BuildControls()
         {
             var screen = Screen(MenuScreen.Controls, true); var card = Card(screen, "How to play", new Vector2(860, 760));
-            string[] keys = { "W A S D", "MOUSE", "SPACE", "RIGHT MOUSE", "ESC" };
-            string[] actions = { "Move", "Look around", "Jump", "Switch day / night", "Pause" };
+            string[] keys = { "W A S D", "MOUSE", "SPACE", "SHIFT", "RIGHT MOUSE", "ESC" };
+            string[] actions = { "Move", "Look around", "Jump", "Sprint", "Switch day / night", "Pause" };
             for (int i = 0; i < keys.Length; i++)
             {
                 float y = 172 - i * 67;
                 var key = Rect("Keycap " + keys[i], card, new Vector2(-190, y), new Vector2(244, 50)); key.gameObject.AddComponent<Image>().color = Ink;
-                bool mouse = i == 1 || i == 3;
+                bool mouse = i == 1 || i == 4;
                 if (mouse) Art("Mouse icon", key, StorybookGraphic.Motif.Mouse, new Vector2(-94, 0), new Vector2(32, 44));
                 Label("Key", key, keys[i], 21, new Vector2(mouse ? 18 : 0, 0), new Vector2(mouse ? 196 : 236, 46), Paper);
                 Label("Action", card, actions[i], 27, new Vector2(160, y), new Vector2(360, 54)).alignment = TextAnchor.MiddleLeft;
