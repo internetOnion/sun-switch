@@ -162,7 +162,10 @@ namespace SunSwitch.Art.EditorTools
             input.actions = actions;
             input.defaultActionMap = "Player";
             input.notificationBehavior = PlayerNotifications.SendMessages;   // StarterAssetsInputs listens to messages
-            GetOrAdd<StarterAssetsInputs>(player);
+            // InputLock owns the cursor (free in menus, locked in play). Starter Assets would lock it
+            // again whenever the window gets focus, even on the Start screen, so it's switched off here.
+            var starterInputs = GetOrAdd<StarterAssetsInputs>(player);
+            starterInputs.cursorLocked = false;
 
             var cameraRoot = player.transform.Find("PlayerCameraRoot");
             if (cameraRoot == null)

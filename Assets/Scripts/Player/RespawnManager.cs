@@ -75,6 +75,9 @@ namespace SunSwitch.Player
         public void ResetToStart()
         {
             Current = FindStartCheckpoint();
+            // A new run: checkpoints from the last one are unreached again, except the start.
+            foreach (var cp in FindObjectsByType<Checkpoint>(FindObjectsSortMode.None))
+                cp.SetReached(cp == Current);
             Respawn(0f);
         }
 

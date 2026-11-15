@@ -56,6 +56,16 @@ namespace SunSwitch.Player
             if (isNew) GameEvents.RaiseCheckpointReached(this);
         }
 
+        /// <summary>
+        /// Sets the reached state without the reached event. RespawnManager.ResetToStart uses it so
+        /// a new run starts with only the start checkpoint lit (lamps and indicators follow).
+        /// </summary>
+        public void SetReached(bool reached)
+        {
+            _reached = reached;
+            if (activeIndicator != null) activeIndicator.SetActive(reached);
+        }
+
         void OnDrawGizmos()
         {
             var spawn = SpawnPoint;

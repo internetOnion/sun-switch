@@ -55,10 +55,11 @@ namespace SunSwitch.LookAndFeel
         {
             var world = WorldPhase.Instance;
             bool day = world == null || world.Current == Phase.Day;
-            float step = volume / fadeTime * Time.unscaledDeltaTime;   // unscaled: keeps fading while paused
-            _menu.volume = Mathf.MoveTowards(_menu.volume, _inMenu ? volume : 0f, step);
-            _day.volume = Mathf.MoveTowards(_day.volume, !_inMenu && day ? volume : 0f, step);
-            _night.volume = Mathf.MoveTowards(_night.volume, !_inMenu && !day ? volume : 0f, step);
+            float level = volume * GameSettings.MusicVolume;           // music volume from Settings
+            float step = Mathf.Max(level, 0.01f) / fadeTime * Time.unscaledDeltaTime;   // unscaled: keeps fading while paused
+            _menu.volume = Mathf.MoveTowards(_menu.volume, _inMenu ? level : 0f, step);
+            _day.volume = Mathf.MoveTowards(_day.volume, !_inMenu && day ? level : 0f, step);
+            _night.volume = Mathf.MoveTowards(_night.volume, !_inMenu && !day ? level : 0f, step);
         }
     }
 }
