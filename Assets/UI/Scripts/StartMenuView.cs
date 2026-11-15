@@ -53,7 +53,15 @@ namespace SunSwitch.UI
         {
             if (canvasRoot == null) BuildCanvas();
             ConfigureSettings();
+            HideQuitInBrowser();
             ShowStart();
+        }
+        // A web page can't close itself, so the Quit button would do nothing there.
+        void HideQuitInBrowser()
+        {
+            if (Application.platform != RuntimePlatform.WebGLPlayer || canvasRoot == null) return;
+            foreach (var action in canvasRoot.GetComponentsInChildren<MenuCommand>(true))
+                if (action.command == MenuCommandId.Quit) action.gameObject.SetActive(false);
         }
         void Start() { Focus(Binding(current).first); }
         void Update()
