@@ -1,0 +1,49 @@
+# Publishes the WebGL build to GitHub Pages.
+#
+# Unity doesn't run here. Build locally with Sun Switch > Build Game > WebGL, zip the contents of
+# Builds/<version>/WebGL as SunSwitch-WebGL.zip, attach it to a draft release (drafts stay
+# hidden), then run this workflow from the Actions tab with the draft's release id.
+name: Publish web build
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_id:
+        description: Id of the draft release that has SunSwitch-WebGL.zip attached
+        required: true
+
+permissions:
+  contents: write   # drafts are only visible with write access
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Download the web build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_ID: ${{ inputs.release_id }}
+        run: |
+          asset=$(gh api "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" --jq '.assets[] | select(.name == "SunSwitch-WebGL.zip") | .id')
+          test -n "$asset"
+          gh api -H "Accept: application/octet-stream" "repos/$GITHUB_REPOSITORY/releases/assets/$asset" > SunSwitch-WebGL.zip
+          mkdir site
+          unzip -q SunSwitch-WebGL.zip -d site
+          touch site/.nojekyll
+          test -f site/index.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
