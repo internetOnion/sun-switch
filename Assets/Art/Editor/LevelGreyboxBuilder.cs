@@ -11,7 +11,8 @@ namespace SunSwitch.Art.EditorTools
     /// Sun Switch > Art > Build Level Grey-box
     ///
     /// Places the whole Sun Switch Level Plan (four sections around the tower, 12 shards,
-    /// 6 checkpoints, kill planes, the Summit auto-cycle zone and the SummitGoal) into
+    /// 6 checkpoints, kill planes, the Summit auto-cycle zone, the SummitGoal and the instruction
+    /// hints) into
     /// Assets/Scenes/Sandbox/Level_Greybox.unity, with the playable rig from Make Sandbox Playable
     /// (player at CP1, follow camera, managers, menu, HUD).
     ///
@@ -57,6 +58,12 @@ namespace SunSwitch.Art.EditorTools
         {
             var cp1 = Checkpoint(s, 0, 0, 0, 0);
             SetStart(cp1);
+            Hint(s, "Controls", new Vector3(0, 1.5f, 1), new Vector3(6, 4, 6),
+                "[WASD] move     [Space] jump     [Shift] sprint     [Mouse] look around");
+            Hint(s, "Switch", new Vector3(0, 1.5f, 17), new Vector3(5, 4, 4),           // end of the Day platform + the station
+                "[Right Mouse] switch Day / Night. Some platforms only exist at Night.");
+            Hint(s, "Ghost", new Vector3(0, 1.5f, 32.25f), new Vector3(6, 4, 8.5f),     // up to the wall
+                "A Day wall is only a ghost at Night. Switch, then walk through it.");
             P(s, "Platforms/Platform_Bridge_Both", 0, 0, 7);
             P(s, "Platforms/Platform_Medium_Day", 0, 0, 14);
             P(s, "Obstacles/Shard_Day", 0, 1.2f, 14);                      // #1
@@ -84,6 +91,8 @@ namespace SunSwitch.Art.EditorTools
         static void BuildSection2(GameObject s)
         {
             Checkpoint(s, 0, 2, 71, 90);                                    // CP2
+            Hint(s, "Mid-air Switch", new Vector3(3, 3.5f, 71), new Vector3(10, 4, 6),
+                "Switch in mid-air: jump first, then [Right Mouse] before you land.");
             P(s, "Platforms/Platform_Medium_Both", 6, 2, 71);
             P(s, "Platforms/Platform_Small_Night", 10.5f, 2, 71);
             P(s, "Platforms/Platform_Small_Day", 14, 2, 71);
@@ -124,6 +133,8 @@ namespace SunSwitch.Art.EditorTools
             P(s, "Platforms/Platform_Pillar_Night", 76.5f, 12, 51.5f);
             P(s, "Obstacles/Shard_Night", 76.5f, 13.2f, 51.5f);             // #8
             Checkpoint(s, 78, 12, 46.5f, 180);                              // CP3b
+            Hint(s, "Phased Hazards", new Vector3(78, 13.5f, 46.5f), new Vector3(6, 4, 4.5f),
+                "Hazards follow the phase too: a Day bar is only a ghost at Night.");
             P(s, "Platforms/Platform_Wide_Both", 78, 12, 40);
             KillBar(P(s, "Obstacles/KillBar_Day", 78, 12, 40), 0, 90);
             KillBar(P(s, "Obstacles/KillBar_Night", 78, 12, 40), 90, 90);
@@ -142,6 +153,8 @@ namespace SunSwitch.Art.EditorTools
         static void BuildSection4(GameObject s)
         {
             Checkpoint(s, 72, 17, 13, 270);                                 // CP4, inside the zone
+            Hint(s, "Auto-cycle", new Vector3(71.5f, 18.5f, 13), new Vector3(6, 4, 6),
+                "Here the world flips by itself. Watch the ring and time your jumps.");
             var zone = new GameObject("AutoCycleZone");
             zone.transform.SetParent(s.transform, false);
             zone.transform.position = new Vector3(55.5f, 22.5f, 22.25f);
@@ -198,6 +211,18 @@ namespace SunSwitch.Art.EditorTools
             if (cp == null) return;
             var so = new SerializedObject(cp);
             so.FindProperty("isStart").boolValue = true;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        // Instruction shown on the HUD while the player is in the box (HintZone, HintPanel).
+        static void Hint(GameObject parent, string name, Vector3 center, Vector3 size, string message)
+        {
+            var go = new GameObject("Hint - " + name);
+            go.transform.SetParent(parent.transform, false);
+            go.transform.position = center;
+            var so = new SerializedObject(go.AddComponent<HintZone>());
+            so.FindProperty("message").stringValue = message;
+            so.FindProperty("size").vector3Value = size;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
