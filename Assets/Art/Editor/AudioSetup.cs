@@ -120,7 +120,7 @@ namespace SunSwitch.Art.EditorTools
             if (dayClip != null) so.FindProperty("dayLayer").objectReferenceValue = dayClip;
             if (nightClip != null) so.FindProperty("nightLayer").objectReferenceValue = nightClip;
             if (menuClip != null) so.FindProperty("menuTrack").objectReferenceValue = menuClip;
-            so.FindProperty("volume").floatValue = 0.5f;
+            so.FindProperty("volume").floatValue = 0.1f;   // music stays quietly in the background
             so.FindProperty("fadeTime").floatValue = 0.5f;
 
             so.ApplyModifiedProperties();

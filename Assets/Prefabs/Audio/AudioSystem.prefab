@@ -107,6 +107,6 @@ MonoBehaviour:
   dayLayer: {fileID: 8300000, guid: 40ed1d973045accbc38dc6d884ad2fed, type: 3}
   nightLayer: {fileID: 8300000, guid: 1a226a565310781293b335e8b4f3f991, type: 3}
   menuTrack: {fileID: 8300000, guid: c3c0a0f9e57c854dacf6b2bfc281c691, type: 3}
-  volume: 0.5
+  volume: 0.1
   fadeTime: 0.5
   startInMenu: 0
