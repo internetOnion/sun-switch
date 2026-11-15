@@ -15,8 +15,9 @@ namespace SunSwitch.Art.EditorTools
     ///   Platform_X            root: BoxCollider (never scaled), PhaseObject
     ///   └─ Visual             real-size mesh + material, safe to replace with final art
     ///   Platform_Moving_X     + MovingPlatform, with PointA / PointB children for its ends
-    ///   Checkpoint            Both platform + Beacon; Trigger child: Checkpoint, Spawn point,
-    ///                         Lit (glow + light, switched on once the checkpoint is reached)
+    ///   Checkpoint            Both platform + Beacon + CheckpointLamp; Trigger child: Checkpoint,
+    ///                         Spawn point, Lamp (ember until reached, then lit), Lit (the light,
+    ///                         switched on once reached), Flare/Beam + Ring (the reached burst)
     ///
     /// Variants set the phase material and the PhaseObject tag + ghost material.
     ///
@@ -217,15 +218,23 @@ namespace SunSwitch.Art.EditorTools
 
         static void ApplyCheckpoint(GameObject root, Spec spec, Material beaconLit)
         {
-            // Reached state: a glowing cap and a warm light on top of the beacon (off until touched).
+            // The lamp on top of the beacon: always there (a faint ember until reached), driven by
+            // CheckpointLamp. Lit holds the light, which Checkpoint switches on when reached.
             var beacon = root.transform.Find("Beacon");
+            var top = beacon.localPosition + new Vector3(0, BeaconHeight / 2f, 0);
+            var lamp = GetOrCreateChild(root, "Lamp");
+            lamp.transform.localPosition = top;
+            lamp.transform.localRotation = Quaternion.identity;
+            GetOrAdd<MeshFilter>(lamp).sharedMesh = GreyboxMeshes.Cylinder("Mesh_Checkpoint_Glow", 0.24f, 0.4f, 12);
+            var lampRenderer = GetOrAdd<MeshRenderer>(lamp);
+            lampRenderer.sharedMaterial = beaconLit;
+            lampRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+
             var lit = GetOrCreateChild(root, "Lit");
-            lit.transform.localPosition = beacon.localPosition + new Vector3(0, BeaconHeight / 2f, 0);
+            lit.transform.localPosition = top;
             lit.transform.localRotation = Quaternion.identity;
-            var cap = GetOrCreateChild(lit, "Glow");
-            cap.transform.localPosition = Vector3.zero;
-            GetOrAdd<MeshFilter>(cap).sharedMesh = GreyboxMeshes.Cylinder("Mesh_Checkpoint_Glow", 0.24f, 0.4f, 12);
-            GetOrAdd<MeshRenderer>(cap).sharedMaterial = beaconLit;
+            var oldCap = lit.transform.Find("Glow");   // the cap used to live here; Lamp replaces it
+            if (oldCap != null) Object.DestroyImmediate(oldCap.gameObject, true);
             var light = GetOrAdd<Light>(lit);
             light.type = LightType.Point;
             light.color = DayColor;
@@ -233,6 +242,27 @@ namespace SunSwitch.Art.EditorTools
             light.intensity = 2f;
             light.shadows = LightShadows.None;
             lit.SetActive(false);   // Checkpoint switches it on; saved off so scenes show the unreached look
+
+            // Reached burst: a beam from the lamp and a ring across the platform (saved off).
+            var flare = GetOrCreateChild(root, "Flare");
+            flare.transform.localPosition = top + new Vector3(0, 0.2f, 0);
+            flare.transform.localRotation = Quaternion.identity;
+            var beam = GetOrCreateChild(flare, "Beam");
+            beam.transform.localPosition = Vector3.zero;
+            beam.transform.localScale = new Vector3(0.6f, 1f, 0.6f);   // CheckpointLamp stretches y
+            GetOrAdd<MeshFilter>(beam).sharedMesh = GreyboxMeshes.Cylinder("Mesh_Checkpoint_Beam", 0.14f, 1f, 12);
+            var beamRenderer = GetOrAdd<MeshRenderer>(beam);
+            beamRenderer.sharedMaterial = beaconLit;
+            beamRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            beam.SetActive(false);
+            var ring = GetOrCreateChild(root, "Ring");
+            ring.transform.localPosition = new Vector3(0, 0.04f, 0);
+            ring.transform.localScale = Vector3.one;
+            GetOrAdd<MeshFilter>(ring).sharedMesh = GreyboxMeshes.Ring("Mesh_Checkpoint_Ring", 0.86f, 0.08f);
+            var ringRenderer = GetOrAdd<MeshRenderer>(ring);
+            ringRenderer.sharedMaterial = beaconLit;
+            ringRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            ring.SetActive(false);
 
             var spawn = GetOrCreateChild(root, "Spawn");
             spawn.transform.localPosition = Vector3.zero;
@@ -250,6 +280,21 @@ namespace SunSwitch.Art.EditorTools
             so.FindProperty("spawnPoint").objectReferenceValue = spawn.transform;
             so.FindProperty("activeIndicator").objectReferenceValue = lit;
             so.ApplyModifiedPropertiesWithoutUndo();
+
+            // Recreated each time so its tuning always matches the script's defaults.
+            var oldLamp = root.GetComponent<SunSwitch.Art.CheckpointLamp>();
+            if (oldLamp != null) Object.DestroyImmediate(oldLamp, true);
+            var lampScript = root.AddComponent<SunSwitch.Art.CheckpointLamp>();
+            var lso = new SerializedObject(lampScript);
+            lso.FindProperty("checkpoint").objectReferenceValue = checkpoint;
+            lso.FindProperty("litIndicator").objectReferenceValue = lit;
+            lso.FindProperty("lamp").objectReferenceValue = lampRenderer;
+            lso.FindProperty("glowLight").objectReferenceValue = light;
+            lso.FindProperty("beam").objectReferenceValue = beam.transform;
+            lso.FindProperty("ring").objectReferenceValue = ring.transform;
+            lso.FindProperty("dayGlow").colorValue = new Color(2.2f, 1.45f, 0.45f);
+            lso.FindProperty("nightGlow").colorValue = new Color(0.5f, 0.75f, 1.6f);
+            lso.ApplyModifiedPropertiesWithoutUndo();
         }
 
         static GameObject SaveVariant(GameObject basePrefab, Spec spec, Phase phase, Material mat)

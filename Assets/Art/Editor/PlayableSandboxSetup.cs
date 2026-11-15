@@ -1,11 +1,15 @@
 using SunSwitch.Core;
+using SunSwitch.GameFlow;
 using SunSwitch.Player;
+using SunSwitch.UI;
 using StarterAssets;
 using Unity.Cinemachine;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.UI;
 
 namespace SunSwitch.Art.EditorTools
 {
@@ -15,8 +19,12 @@ namespace SunSwitch.Art.EditorTools
     /// Turns Platforms_Sandbox into a small playable test level: the Lightkeeper becomes the
     /// player (LightkeeperController + Starter Assets input, PlayerDeath, PhaseSwitchInput,
     /// PhaseOverlapChecker, PlatformRider), the Main Camera follows it through a Cinemachine
-    /// third-person camera, a RespawnManager brings the player back to the last checkpoint, and
-    /// a short "Test Course" strings the platforms and obstacles together.
+    /// third-person camera, and a short "Test Course" strings the platforms and obstacles
+    /// together up to a SummitGoal.
+    ///
+    /// Game flow (Part B): the managers get GameManager, LivesSystem, RunTimer and ShardTracker
+    /// (RespawnManager's own respawn is switched off, GameManager decides), the storybook
+    /// MenuRoot is driven by GameMenuFlow, and the HUD prefab shows lives, timer, phase and shards.
     ///
     /// Sandbox only: the real player prefab, camera and managers for Main.unity belong to the
     /// player and phase-core owners. Safe to run again; it rebuilds the course and reuses the rest.
@@ -43,15 +51,27 @@ namespace SunSwitch.Art.EditorTools
             }
 
             BuildCourse(scene);
-            var player = SetUpPlayer(scene);
-            if (player == null) return;
-            SetUpCamera(scene, player);
-            SetUpManagers(scene);
-            AudioSetup.SetUpAudio(scene);
-            AudioSetup.SetUpPlayerAudio(scene);
+if (!SetUpPlayableRig(scene, StartPosition, Quaternion.Euler(0, 90, 0))) return;
 
             EditorSceneManager.MarkSceneDirty(scene);
-            Debug.Log("[Sun Switch] Sandbox is playable: WASD / mouse to move, Space to jump, Right Mouse to switch, T to force a switch.");
+            Debug.Log("[Sun Switch] Sandbox is playable: Play on the Start screen, then WASD / mouse to move, Space to jump, Right Mouse to switch, Esc to pause, T to force a switch.");
+        }
+
+        /// The player, follow camera, managers, menu and HUD for a scene, with the player at
+        /// start facing along rotation. Also used by the level grey-box and Main.unity. Returns
+        /// false if the Starter Assets input actions are missing. shardTotal 0 counts the shards in
+        /// the scene; Main passes the tower's total, since its shards are in the section scenes.
+        internal static bool SetUpPlayableRig(UnityEngine.SceneManagement.Scene scene, Vector3 start, Quaternion rotation,
+            int shardTotal = 0, string managersName = "Sandbox Managers")
+        {
+            var player = SetUpPlayer(scene, start, rotation);
+            if (player == null) return false;
+            SetUpCamera(scene, player);
+            var managers = SetUpManagers(scene, managersName);
+            SetUpGameFlow(scene, managers, shardTotal);
+            AudioSetup.SetUpAudio(scene);
+            AudioSetup.SetUpPlayerAudio(scene);
+            return true;
         }
 
         // ---------------------------------------------------------------- course
@@ -89,9 +109,16 @@ namespace SunSwitch.Art.EditorTools
             // Night wall across the last platform: pass it in Day.
             Place(course, "Platforms/Platform_Wide_Both", P(67, 5));
             Place(course, "Platforms/Wall_Night", P(66, 5), Quaternion.Euler(0, 90, 0));
+            // Summit: one more hop to the goal, which wins the run.
+            Place(course, "Platforms/Platform_Medium_Both", P(74, 5));
+            Place(course, "Obstacles/SummitGoal", P(74, 5));
             // Catch falls before the void line far below.
             var plane = Place(course, "Obstacles/KillPlane", new Vector3(34, -4, CourseZ));
-            if (plane != null) plane.transform.localScale = new Vector3(1.9f, 1f, 0.5f);
+            if (plane != null)
+            {
+                plane.transform.position = new Vector3(36, -4, CourseZ);
+                plane.transform.localScale = new Vector3(2.1f, 1f, 0.5f);   // x -6..78: start to summit
+            }
         }
 
         static Vector3 P(float x, float y) => new Vector3(x, y, CourseZ);
@@ -107,7 +134,7 @@ namespace SunSwitch.Art.EditorTools
 
         // ---------------------------------------------------------------- player
 
-        static GameObject SetUpPlayer(UnityEngine.SceneManagement.Scene scene)
+        static GameObject SetUpPlayer(UnityEngine.SceneManagement.Scene scene, Vector3 start, Quaternion rotation)
         {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(LightkeeperPath);
             GameObject player = null;
@@ -118,7 +145,7 @@ namespace SunSwitch.Art.EditorTools
                 player = (GameObject)PrefabUtility.InstantiatePrefab(prefab, scene);
                 Undo.RegisterCreatedObjectUndo(player, "Add Lightkeeper");
             }
-            player.transform.SetPositionAndRotation(StartPosition, Quaternion.Euler(0, 90, 0));
+            player.transform.SetPositionAndRotation(start, rotation);
             player.tag = "Player";
             player.layer = PlayerLayer;
 
@@ -137,7 +164,10 @@ namespace SunSwitch.Art.EditorTools
             input.actions = actions;
             input.defaultActionMap = "Player";
             input.notificationBehavior = PlayerNotifications.SendMessages;   // StarterAssetsInputs listens to messages
-            GetOrAdd<StarterAssetsInputs>(player);
+            // InputLock owns the cursor (free in menus, locked in play). Starter Assets would lock it
+            // again whenever the window gets focus, even on the Start screen, so it's switched off here.
+            var starterInputs = GetOrAdd<StarterAssetsInputs>(player);
+            starterInputs.cursorLocked = false;
 
             var cameraRoot = player.transform.Find("PlayerCameraRoot");
             if (cameraRoot == null)
@@ -183,24 +213,93 @@ namespace SunSwitch.Art.EditorTools
                 follow = go.GetComponent<CinemachineCamera>();
             }
             follow.Target.TrackingTarget = player.transform.Find("PlayerCameraRoot");
-            follow.transform.SetPositionAndRotation(player.transform.position + new Vector3(-4, 2, 0), Quaternion.Euler(10, 90, 0));
+            var back = player.transform.rotation;
+            follow.transform.SetPositionAndRotation(player.transform.position + back * new Vector3(0, 2, -4), back * Quaternion.Euler(10, 0, 0));
             EditorUtility.SetDirty(follow);
         }
 
         // ---------------------------------------------------------------- managers
 
-        static void SetUpManagers(UnityEngine.SceneManagement.Scene scene)
+        static GameObject SetUpManagers(UnityEngine.SceneManagement.Scene scene, string managersName)
         {
             if (Object.FindFirstObjectByType<WorldPhase>(FindObjectsInactive.Include) == null)
-                DayNightLookSetup.AddToOpenScene();   // adds DayNightLook + WorldPhase in sandboxes
+                DayNightLookSetup.AddToOpenScene();   // adds DayNightLook (+ WorldPhase in sandboxes)
 
-            if (Object.FindFirstObjectByType<RespawnManager>(FindObjectsInactive.Include) == null)
+            var respawn = Object.FindFirstObjectByType<RespawnManager>(FindObjectsInactive.Include);
+            if (respawn == null)
             {
-                var managers = new GameObject("Sandbox Managers");
-                Undo.RegisterCreatedObjectUndo(managers, "Add sandbox managers");
-                SceneManagerMove(managers, scene);
-                managers.AddComponent<RespawnManager>();   // respawns on death by itself (no GameManager here)
+                var go = new GameObject(managersName);
+                Undo.RegisterCreatedObjectUndo(go, "Add managers");
+                SceneManagerMove(go, scene);
+                respawn = go.AddComponent<RespawnManager>();
             }
+            // Outside sandboxes the Day/Night setup leaves WorldPhase to the managers.
+            if (Object.FindFirstObjectByType<WorldPhase>(FindObjectsInactive.Include) == null)
+                respawn.gameObject.AddComponent<WorldPhase>();
+            // GameManager decides between respawn and Game Over; respawning here too would do it twice.
+            var so = new SerializedObject(respawn);
+            so.FindProperty("respawnOnDeath").boolValue = false;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            return respawn.gameObject;
+        }
+
+        // ---------------------------------------------------------------- game flow
+
+        const string MenuRootPath = "Assets/UI/Prefabs/MenuRoot.prefab";
+
+        /// Part B: GameManager + lives, timer and shards on the managers, the storybook menu
+        /// driven by GameMenuFlow, the HUD, and an EventSystem for the menu buttons.
+        static void SetUpGameFlow(UnityEngine.SceneManagement.Scene scene, GameObject managers, int shardTotal)
+        {
+            var lives = GetOrAdd<LivesSystem>(managers);
+            var timer = GetOrAdd<RunTimer>(managers);
+            var shards = GetOrAdd<ShardTracker>(managers);
+            var game = GetOrAdd<GameManager>(managers);
+            var gso = new SerializedObject(game);
+            gso.FindProperty("lives").objectReferenceValue = lives;
+            gso.FindProperty("timer").objectReferenceValue = timer;
+            gso.FindProperty("shards").objectReferenceValue = shards;
+            gso.FindProperty("startInMenu").boolValue = true;
+            gso.ApplyModifiedPropertiesWithoutUndo();
+
+            // The sandbox has fewer than the tower's 12 shards: count the ones in the scene.
+            int shardCount = shardTotal > 0 ? shardTotal
+                : Object.FindObjectsByType<Shard>(FindObjectsInactive.Include, FindObjectsSortMode.None).Length;
+            var sso = new SerializedObject(shards);
+            sso.FindProperty("total").intValue = Mathf.Max(1, shardCount);
+            sso.ApplyModifiedPropertiesWithoutUndo();
+
+            if (Object.FindFirstObjectByType<EventSystem>(FindObjectsInactive.Include) == null)
+            {
+                var events = new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
+                Undo.RegisterCreatedObjectUndo(events, "Add EventSystem");
+                SceneManagerMove(events, scene);
+            }
+
+            var menu = FindInstance(scene, MenuRootPath) ?? Instantiate(scene, MenuRootPath, "Add menu");
+            if (menu != null) GetOrAdd<GameMenuFlow>(menu);
+
+            if (AssetDatabase.LoadAssetAtPath<GameObject>(HudPrefabBuilder.PrefabPath) == null) HudPrefabBuilder.Build();
+            if (FindInstance(scene, HudPrefabBuilder.PrefabPath) == null) Instantiate(scene, HudPrefabBuilder.PrefabPath, "Add HUD");
+
+            EditorUtility.SetDirty(managers);
+        }
+
+        static GameObject FindInstance(UnityEngine.SceneManagement.Scene scene, string prefabPath)
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            foreach (var root in scene.GetRootGameObjects())
+                if (prefab != null && PrefabUtility.GetCorrespondingObjectFromSource(root) == prefab) return root;
+            return null;
+        }
+
+        static GameObject Instantiate(UnityEngine.SceneManagement.Scene scene, string prefabPath, string undo)
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            if (prefab == null) { Debug.LogError($"[Sun Switch] {prefabPath} missing."); return null; }
+            var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, scene);
+            Undo.RegisterCreatedObjectUndo(go, undo);
+            return go;
         }
 
         // ---------------------------------------------------------------- helpers

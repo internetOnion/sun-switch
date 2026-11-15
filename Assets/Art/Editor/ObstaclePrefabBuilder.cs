@@ -24,6 +24,8 @@ namespace SunSwitch.Art.EditorTools
     ///   KillSurface_S/M_X    root: base collider, PhaseObject; Kill child: trigger + KillSurface
     ///   Shard_Day / _Night   root: trigger + Shard + PhaseObject; Visual bobs (GDD §4)
     ///   KillPlane            invisible 40 x 40 m trigger + KillSurface; put one under each section
+    ///   SummitGoal           root: pillar collider; Pillar + glowing Crown; Trigger child: SummitGoal
+    ///   └─ Ending Beat       column of light, saved off; SummitGoal turns it on when reached
     ///
     /// Menu commands (both safe to run again):
     ///   Build Obstacle Prefabs      – creates or updates the prefabs in place (same GUIDs)
@@ -42,6 +44,8 @@ namespace SunSwitch.Art.EditorTools
         const float BarHeight = 0.75f;   // bar centre above the post's bottom (ArtSource/obstacles.py)
         const float BarLength = 5.5f;
         const float BarThickness = 0.34f;
+        const float SummitPillarHeight = 1.8f;
+        const float SummitBeamHeight = 12f;
 
         static readonly string[] Phases = { "Day", "Night", "Both" };
 
@@ -73,6 +77,7 @@ namespace SunSwitch.Art.EditorTools
             count += BuildPhased("KillSurface_M", root => BuildKillSurface(root, "Obstacle_KillSurface_M", 4f), phaseMats);
             count += BuildPhased("Shard", BuildShard, shardMats);
             count += BuildSingle("KillPlane", BuildKillPlane);
+            count += BuildSingle("SummitGoal", BuildSummitGoal);
             AssetDatabase.SaveAssets();
             Debug.Log($"[Sun Switch] Built {count} obstacle prefabs in {VariantDir}.");
         }
@@ -250,6 +255,59 @@ namespace SunSwitch.Art.EditorTools
             box.center = new Vector3(0, -0.5f, 0);
             box.size = new Vector3(40f, 1f, 40f);
             GetOrAdd<KillSurface>(root);
+        }
+
+        static void BuildSummitGoal(GameObject root)
+        {
+            // The finish: a stone beacon with a gold crown. Touching the trigger around it wins
+            // the run; the ending beat (a column of light) switches on for the end-screen delay.
+            var stone = AssetDatabase.LoadAssetAtPath<Material>($"{PhaseMaterialDir}/M_Checkpoint_Beacon.mat");
+            var glow = AssetDatabase.LoadAssetAtPath<Material>($"{PhaseMaterialDir}/M_Checkpoint_Lit.mat");
+            if (stone == null || glow == null)
+                Debug.LogError($"[Sun Switch] Checkpoint materials missing in {PhaseMaterialDir}. Run Update Platform Prefabs first.");
+
+            var pillarCollider = GetOrAdd<BoxCollider>(root);
+            pillarCollider.center = new Vector3(0, SummitPillarHeight / 2f, 0);
+            pillarCollider.size = new Vector3(0.7f, SummitPillarHeight, 0.7f);
+
+            var pillar = Child(root, "Pillar");
+            pillar.transform.localPosition = new Vector3(0, SummitPillarHeight / 2f, 0);
+            GetOrAdd<MeshFilter>(pillar).sharedMesh = GreyboxMeshes.Cylinder("Mesh_Summit_Pillar", 0.32f, SummitPillarHeight, 16);
+            GetOrAdd<MeshRenderer>(pillar).sharedMaterial = stone;
+
+            var crown = Child(root, "Crown");
+            crown.transform.localPosition = new Vector3(0, SummitPillarHeight + 0.25f, 0);
+            GetOrAdd<MeshFilter>(crown).sharedMesh = GreyboxMeshes.Cylinder("Mesh_Summit_Crown", 0.42f, 0.5f, 16);
+            GetOrAdd<MeshRenderer>(crown).sharedMaterial = glow;
+            var crownLight = GetOrAdd<Light>(crown);
+            crownLight.type = LightType.Point;
+            crownLight.color = Hex("FFD98A");
+            crownLight.range = 6f;
+            crownLight.intensity = 2f;
+            crownLight.shadows = LightShadows.None;
+
+            var beat = Child(root, "Ending Beat");
+            beat.transform.localPosition = new Vector3(0, SummitPillarHeight + 0.5f + SummitBeamHeight / 2f, 0);
+            GetOrAdd<MeshFilter>(beat).sharedMesh = GreyboxMeshes.Cylinder("Mesh_Summit_Beam", 0.22f, SummitBeamHeight, 16);
+            GetOrAdd<MeshRenderer>(beat).sharedMaterial = glow;
+            var beatLight = GetOrAdd<Light>(beat);
+            beatLight.type = LightType.Point;
+            beatLight.color = Hex("FFE3A3");
+            beatLight.range = 16f;
+            beatLight.intensity = 6f;
+            beatLight.shadows = LightShadows.None;
+            beat.SetActive(false);   // SummitGoal switches it on
+
+            var trigger = Child(root, "Trigger");
+            trigger.transform.localPosition = new Vector3(0, 1.25f, 0);
+            var box = GetOrAdd<BoxCollider>(trigger);
+            box.isTrigger = true;
+            box.center = Vector3.zero;
+            box.size = new Vector3(3f, 2.5f, 3f);
+            var goal = GetOrAdd<SunSwitch.GameFlow.SummitGoal>(trigger);
+            var so = new SerializedObject(goal);
+            so.FindProperty("endingBeat").objectReferenceValue = beat;
+            so.ApplyModifiedPropertiesWithoutUndo();
         }
 
         static void BuildShard(GameObject root)

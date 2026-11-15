@@ -208,7 +208,8 @@ namespace SunSwitch.Player
             Vector2 look = InputLock.IsLocked ? Vector2.zero : _input.look;
             if (look.sqrMagnitude >= _threshold && !LockCameraPosition)
             {
-                float deltaTimeMultiplier = IsCurrentDeviceMouse ? 1.0f : Time.deltaTime;
+                // Mouse sensitivity from the Settings screen.
+                float deltaTimeMultiplier = (IsCurrentDeviceMouse ? 1.0f : Time.deltaTime) * GameSettings.MouseSensitivity;
                 _cinemachineTargetYaw += look.x * deltaTimeMultiplier;
                 _cinemachineTargetPitch += look.y * deltaTimeMultiplier;
             }

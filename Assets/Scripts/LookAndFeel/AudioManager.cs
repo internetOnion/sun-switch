@@ -112,7 +112,7 @@ namespace SunSwitch.LookAndFeel
                 var source = _sources[_next];
                 _next = (_next + 1) % _sources.Length;
                 source.pitch = 1f + UnityEngine.Random.Range(-pitchVariation, pitchVariation);
-                source.PlayOneShot(clip, s.volume);
+                source.PlayOneShot(clip, s.volume * GameSettings.SfxVolume);   // SFX volume from Settings
                 return;
             }
         }
