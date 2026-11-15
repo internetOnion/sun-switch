@@ -41,14 +41,30 @@ namespace SunSwitch.Art.EditorTools
             foreach (var root in scene.GetRootGameObjects())
                 if (root.name.StartsWith("Section ")) Object.DestroyImmediate(root);
 
-            BuildSection1(Root("Section 1 - Mossy Base"));
-            BuildSection2(Root("Section 2 - Aqueducts"));
-            BuildSection3(Root("Section 3 - Clockwork"));
-            BuildSection4(Root("Section 4 - Summit"));
+            for (int i = 0; i < SectionNames.Length; i++) BuildSection(i, Root(SectionNames[i]));
 
             if (!PlayableSandboxSetup.SetUpPlayableRig(scene, Vector3.zero, Quaternion.identity)) return;
             EditorSceneManager.SaveScene(scene);
             Debug.Log($"[Sun Switch] Level grey-box built in {ScenePath}.");
+        }
+
+        /// <summary>Section root names, in order. GameScenesBuilder uses them for Section1-4.unity.</summary>
+        internal static readonly string[] SectionNames =
+            { "Section 1 - Mossy Base", "Section 2 - Aqueducts", "Section 3 - Clockwork", "Section 4 - Summit" };
+
+        /// <summary>Shards in the whole level (3 per section).</summary>
+        internal const int ShardTotal = 12;
+
+        /// <summary>Fills root with section index (0-3): platforms, shards, checkpoints, hazards, hints.</summary>
+        internal static void BuildSection(int index, GameObject root)
+        {
+            switch (index)
+            {
+                case 0: BuildSection1(root); break;
+                case 1: BuildSection2(root); break;
+                case 2: BuildSection3(root); break;
+                case 3: BuildSection4(root); break;
+            }
         }
 
         // ---------------------------------------------------------------- Section 1 (P3)
