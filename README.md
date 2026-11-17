@@ -2,7 +2,7 @@
 
 A 3D obby where the world flips between **Day** and **Night**. Platforms, hazards and shards exist in Day, Night, or both. You play the last Lightkeeper and switch the phase to make the path appear as you climb a tower of floating sky-ruins.
 
-**[Play Sun Switch in your browser](https://internetonion.github.io/sun-switch/)**
+**[Play Sun Switch in your browser](https://internetonion.github.io/sun-switch/)** · **[Watch the demo](https://drive.google.com/file/d/1BmxfIasDQDDmu_IOT2o1Qru1IolpR9-a/view?usp=sharing)** · **[Download for macOS / Windows](https://github.com/internetOnion/sun-switch/releases/latest)**
 
 ## Goal
 
